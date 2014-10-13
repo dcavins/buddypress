@@ -338,7 +338,7 @@ class BP_Legacy extends BP_Theme_Compat {
 		foreach ( $locations as $location_type => $location ) {
 			foreach ( $subdirs as $subdir ) {
 				if ( file_exists( trailingslashit( $location['dir'] ) . trailingslashit( $subdir ) . $location['file'] ) ) {
-					$retval['location'] = trailingslashit( $location['uri'] ) . trailingslashit( $subdir ) . $file;
+					$retval['location'] = trailingslashit( $location['uri'] ) . trailingslashit( $subdir ) . $location['file'];
 					$retval['handle']   = $location_type . '-' . $type;
 					break 2;
 				}
