@@ -418,7 +418,7 @@ function bp_core_fetch_avatar( $args = '' ) {
 	// If no avatars could be found, try to display a gravatar
 
 	// Skips gravatar check if $no_grav is passed
-	if ( ! apply_filters( 'bp_core_fetch_avatar_no_grav', $no_grav ) ) {
+	if ( ! apply_filters( 'bp_core_fetch_avatar_no_grav', $no_grav, $object ) ) {
 
 		// Set gravatar size
 		if ( false !== $width ) {
