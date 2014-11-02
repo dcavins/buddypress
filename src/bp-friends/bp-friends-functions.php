@@ -579,6 +579,15 @@ function bp_friends_prime_mentions_results() {
 		return;
 	}
 
+	// Bail out if the site has a ton of users.
+	if ( is_multisite() && wp_is_large_network( 'users' ) ) {
+		return;
+	}
+
+	if ( friends_get_total_friend_count( get_current_user_id() ) > 150 ) {
+		return;
+	}
+
 	$friends_query = array(
 		'count_total'     => '',                    // Prevents total count
 		'populate_extras' => false,
@@ -594,7 +603,12 @@ function bp_friends_prime_mentions_results() {
 		$result        = new stdClass();
 		$result->ID    = $user->user_nicename;
 		$result->image = bp_core_fetch_avatar( array( 'html' => false, 'item_id' => $user->ID ) );
-		$result->name  = bp_core_get_user_displayname( $user->ID );
+
+		if ( ! empty( $user->display_name ) && ! bp_disable_profile_sync() ) {
+			$result->name = $user->display_name;
+		} else {
+			$result->name = bp_core_get_user_displayname( $user->ID );
+		}
 
 		$results[] = $result;
 	}

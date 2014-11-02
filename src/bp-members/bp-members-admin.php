@@ -477,7 +477,7 @@ class BP_Members_Admin {
 			$this->is_self_profile = true;
 
 		// Is the user attempting to edit their own profile
-		} else {
+		} elseif ( isset( $_GET['user_id' ] ) || ( isset( $_GET['page'] ) && ( 'bp-profile-edit' === $_GET['page'] ) ) ) {
 			$this->is_self_profile = (bool) ( $this->get_user_id() === $this->current_user_id );
 		}
 
@@ -832,8 +832,6 @@ class BP_Members_Admin {
 					<div id="poststuff">
 
 						<div id="post-body" class="metabox-holder columns-<?php echo 1 == get_current_screen()->get_columns() ? '1' : '2'; ?>">
-							<div id="post-body-content">
-							</div><!-- #post-body-content -->
 
 							<div id="postbox-container-1" class="postbox-container">
 								<?php do_meta_boxes( get_current_screen()->id, 'side', $user ); ?>

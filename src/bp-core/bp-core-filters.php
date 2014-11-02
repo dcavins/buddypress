@@ -423,12 +423,13 @@ add_filter( 'wpmu_signup_user_notification', 'bp_core_activation_signup_user_not
  * @param string $seplocation Direction to display title.
  * @return string New page title.
  */
-function bp_modify_page_title( $title, $sep, $seplocation ) {
+function bp_modify_page_title( $title, $sep = '', $seplocation = '' ) {
 	global $bp;
 
 	// If this is not a BP page, just return the title produced by WP
-	if ( bp_is_blog_page() )
+	if ( bp_is_blog_page() ) {
 		return $title;
+	}
 
 	// If this is a 404, let WordPress handle it
 	if ( is_404() ) {
@@ -436,43 +437,29 @@ function bp_modify_page_title( $title, $sep, $seplocation ) {
 	}
 
 	// If this is the front page of the site, return WP's title
-	if ( is_front_page() || is_home() )
+	if ( is_front_page() || is_home() ) {
 		return $title;
+	}
 
 	$title = '';
 
 	// Displayed user
-	if ( bp_get_displayed_user_fullname() && !is_404() ) {
-
-		// Get the component's ID to try and get it's name
-		$component_id = $component_name = bp_current_component();
-
-		// Use the actual component name
-		if ( !empty( $bp->{$component_id}->name ) ) {
-			$component_name = $bp->{$component_id}->name;
-
-		// Fall back on the component ID (probably same as current_component)
-		} elseif ( !empty( $bp->{$component_id}->id ) ) {
-			$component_name = $bp->{$component_id}->id;
-		}
-
-		// Construct the page title. 1 = user name, 2 = seperator, 3 = component name
-		$title = strip_tags( sprintf( _x( '%1$s %3$s %2$s', 'Construct the page title. 1 = user name, 2 = component name, 3 = seperator', 'buddypress' ), bp_get_displayed_user_fullname(), ucwords( $component_name ), $sep ) );
+	if ( bp_get_displayed_user_fullname() && ! is_404() ) {
+		$title = bp_get_displayed_user_fullname();
 
 	// A single group
-	} elseif ( bp_is_active( 'groups' ) && !empty( $bp->groups->current_group ) && !empty( $bp->bp_options_nav[$bp->groups->current_group->slug] ) ) {
-		$subnav = isset( $bp->bp_options_nav[$bp->groups->current_group->slug][bp_current_action()]['name'] ) ? $bp->bp_options_nav[$bp->groups->current_group->slug][bp_current_action()]['name'] : '';
-		// translators: "group name | group nav section name"
-		$title = sprintf( __( '%1$s | %2$s', 'buddypress' ), $bp->bp_options_title, $subnav );
+	} elseif ( bp_is_active( 'groups' ) && ! empty( $bp->groups->current_group ) && ! empty( $bp->bp_options_nav[ $bp->groups->current_group->slug ] ) ) {
+		$subnav = isset( $bp->bp_options_nav[ $bp->groups->current_group->slug ][ bp_current_action() ]['name'] ) ? $bp->bp_options_nav[ $bp->groups->current_group->slug ][ bp_current_action() ]['name'] : '';
+		// translators: 1 = group name, 2 = group nav section name, 3 = separator
+		$title = sprintf( __( '%1$s %3$s %2$s', 'buddypress' ), $bp->bp_options_title, $subnav, $sep );
 
 	// A single item from a component other than groups
 	} elseif ( bp_is_single_item() ) {
-		// translators: "component item name | component nav section name | root component name"
-		$title = sprintf( __( '%1$s | %2$s | %3$s', 'buddypress' ), $bp->bp_options_title, $bp->bp_options_nav[bp_current_item()][bp_current_action()]['name'], bp_get_name_from_root_slug( bp_get_root_slug() ) );
+		// translators: 1 = component item name, 2 = component nav section name, 3 = separator
+		$title = sprintf( __( '%1$s %3$s %2$s', 'buddypress' ), $bp->bp_options_title, $bp->bp_options_nav[ bp_current_item() ][ bp_current_action() ]['name'], $sep );
 
 	// An index or directory
 	} elseif ( bp_is_directory() ) {
-
 		$current_component = bp_current_component();
 
 		// No current component (when does this happen?)
