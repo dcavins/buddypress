@@ -11,22 +11,30 @@ require_once dirname( __FILE__ ) . '/factory.php';
 class BP_UnitTestCase extends WP_UnitTestCase {
 
 	protected $temp_has_bp_moderate = array();
-	protected $cached_SERVER_NAME = null;
+	protected static $cached_SERVER_NAME = null;
+
+	public static function setUpBeforeClass() {
+		// Fake WP mail globals, to avoid errors
+		add_filter( 'wp_mail', array( 'BP_UnitTestCase', 'setUp_wp_mail' ) );
+		add_filter( 'wp_mail_from', array( 'BP_UnitTestCase', 'tearDown_wp_mail' ) );
+	}
 
 	public function setUp() {
 		parent::setUp();
 
-		// Make sure all users are deleted
 		// There's a bug in the multisite tests that causes the
 		// transaction rollback to fail for the first user created,
 		// which busts every other attempt to create users. This is a
-		// hack workaround
+		// hack workaround.
 		global $wpdb;
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->users}" );
+		if ( is_multisite() ) {
+			$user_1 = get_user_by( 'login', 'user 1' );
+			if ( $user_1 ) {
+				$wpdb->delete( $wpdb->users, array( 'ID' => $user_1->ID ) );
+				clean_user_cache( $user_1 );
+			}
+		}
 
-		// Fake WP mail globals, to avoid errors
-		add_filter( 'wp_mail', array( $this, 'setUp_wp_mail' ) );
-		add_filter( 'wp_mail_from', array( $this, 'tearDown_wp_mail' ) );
 
 		$this->factory = new BP_UnitTest_Factory;
 
@@ -302,7 +310,7 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 	 *
 	 * @global BuddyPres $bp
 	 */
-	function set_current_user( $user_id ) {
+	public static function set_current_user( $user_id ) {
 		global $bp;
 		$bp->loggedin_user->id = $user_id;
 		$bp->loggedin_user->fullname       = bp_core_get_user_displayname( $user_id );
@@ -311,35 +319,6 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 		$bp->loggedin_user->userdata       = bp_core_get_core_userdata( $user_id );
 
 		wp_set_current_user( $user_id );
-	}
-
-	/**
-	 * When creating a new user, it's almost always necessary to have the
-	 * last_activity usermeta set right away, so that the user shows up in
-	 * directory queries. This is a shorthand wrapper for the user factory
-	 * create() method.
-	 *
-	 * Also set a display name
-	 */
-	function create_user( $args = array() ) {
-		$r = wp_parse_args( $args, array(
-			'role' => 'subscriber',
-			'last_activity' => date( 'Y-m-d H:i:s', strtotime( bp_core_current_time() ) - 60*60*24*365 ),
-		) );
-
-		$last_activity = $r['last_activity'];
-		unset( $r['last_activity'] );
-
-		$user_id = $this->factory->user->create( $r );
-
-		bp_update_user_last_activity( $user_id, $last_activity );
-
-		if ( bp_is_active( 'xprofile' ) ) {
-			$user = new WP_User( $user_id );
-			xprofile_set_field_data( 1, $user_id, $user->display_name );
-		}
-
-		return $user_id;
 	}
 
 	public static function add_user_to_group( $user_id, $group_id, $args = array() ) {
@@ -426,9 +405,9 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 	/**
 	 * Set up globals necessary to avoid errors when using wp_mail()
 	 */
-	public function setUp_wp_mail( $args ) {
+	public static function setUp_wp_mail( $args ) {
 		if ( isset( $_SERVER['SERVER_NAME'] ) ) {
-			$this->cached_SERVER_NAME = $_SERVER['SERVER_NAME'];
+			self::$cached_SERVER_NAME = $_SERVER['SERVER_NAME'];
 		}
 
 		$_SERVER['SERVER_NAME'] = 'example.com';
@@ -440,9 +419,9 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 	/**
 	 * Tear down globals set up in setUp_wp_mail()
 	 */
-	public function tearDown_wp_mail( $args ) {
-		if ( ! empty( $this->cached_SERVER_NAME ) ) {
-			$_SERVER['SERVER_NAME'] = $this->cached_SERVER_NAME;
+	public static function tearDown_wp_mail( $args ) {
+		if ( ! empty( self::$cached_SERVER_NAME ) ) {
+			$_SERVER['SERVER_NAME'] = self::$cached_SERVER_NAME;
 			unset( $this->cached_SERVER_NAME );
 		} else {
 			unset( $_SERVER['SERVER_NAME'] );
@@ -450,5 +429,13 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 
 		// passthrough
 		return $args;
+	}
+
+	/**
+	 * Commit a MySQL transaction.
+	 */
+	public static function commit_transaction() {
+		global $wpdb;
+		$wpdb->query( 'COMMIT;' );
 	}
 }

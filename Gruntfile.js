@@ -2,9 +2,8 @@
 /* global module */
 module.exports = function( grunt ) {
 	var SOURCE_DIR = 'src/',
-		BUILD_DIR  = 'build/',
+		BUILD_DIR = 'build/',
 
-		// CSS
 		BP_CSS = [
 			'**/*.css'
 		],
@@ -14,17 +13,12 @@ module.exports = function( grunt ) {
 			'!**/*-rtl.css'
 		],
 
-		// JavaScript - Core
 		BP_JS = [
 			'**/*.js'
 		],
 
-		// JavaScript exclusions, for excluding from certain tasks e.g jshint
-		BP_EXCLUDED_JS = [
-			'!bp-core/deprecated/js/**/*.js', // Deprecated
-			'!bp-core/js/jquery.atwho.js',    // External 3rd party library
-			'!bp-core/js/jquery.caret.js',    // External 3rd party library
-			'!bp-core/js/jquery-cookie.js'    // External 3rd party library
+		BP_EXCLUDED_MISC = [
+			'!bp-forums/bbpress/**/*'
 		];
 
 	require( 'matchdep' ).filterDev( ['grunt-*', '!grunt-legacy-util'] ).forEach( grunt.loadNpmTasks );
@@ -40,7 +34,7 @@ module.exports = function( grunt ) {
 			core: {
 				expand: true,
 				cwd: SOURCE_DIR,
-				src: BP_JS.concat( BP_EXCLUDED_JS ),
+				src: BP_JS,
 
 				/**
 				 * Limit JSHint's run to a single specified file:
@@ -82,7 +76,7 @@ module.exports = function( grunt ) {
 				dest: SOURCE_DIR,
 				extDot: 'last',
 				ext: '-rtl.css',
-				src: BP_CSS.concat( BP_EXCLUDED_CSS ),
+				src: BP_CSS.concat( BP_EXCLUDED_CSS, BP_EXCLUDED_MISC ),
 				options: { generateExactDuplicates: true }
 			}
 		},
@@ -108,7 +102,8 @@ module.exports = function( grunt ) {
 				]
 			},
 			files: {
-				src: SOURCE_DIR + '**/*.php',
+				cwd: SOURCE_DIR,
+				src: ['**/*.php'].concat( BP_EXCLUDED_MISC ),
 				expand: true
 			}
 		},
@@ -133,7 +128,7 @@ module.exports = function( grunt ) {
 			core: {
 				expand: true,
 				cwd: SOURCE_DIR,
-				src: ['**/*.{gif,jpg,jpeg,png}'],
+				src: ['**/*.{gif,jpg,jpeg,png}'].concat( BP_EXCLUDED_MISC ),
 				dest: SOURCE_DIR
 			}
 		},
@@ -148,7 +143,7 @@ module.exports = function( grunt ) {
 						dest: BUILD_DIR,
 						dot: true,
 						expand: true,
-						src: ['**', '!**/.{svn,git}/**']
+						src: ['**', '!**/.{svn,git}/**'].concat( BP_EXCLUDED_MISC )
 					}
 				]
 			}
@@ -213,12 +208,12 @@ module.exports = function( grunt ) {
 			},
 			build: {
 				files: {
-					src: [BUILD_DIR + '/**/*.js' ]
+					src: [BUILD_DIR + '/**/*.js']
 				}
 			},
 			src: {
 				files: {
-					src: [SOURCE_DIR + '/**/*.js' ]
+					src: [SOURCE_DIR + '/**/*.js'].concat( BP_EXCLUDED_MISC )
 				}
 			}
 		},

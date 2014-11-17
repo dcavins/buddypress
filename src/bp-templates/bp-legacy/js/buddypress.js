@@ -1525,6 +1525,27 @@ jq(document).ready( function() {
 		return false;
 	});
 
+	/* Selecting/Deselecting all notifications */
+	jq('#select-all-notifications').click(function(event) {
+		if( this.checked ) {
+			jq('.notification-check').each(function() {
+				this.checked = true;
+			});
+		} else {
+			jq('.notification-check').each(function() {
+				this.checked = false;
+			});
+		}
+	});
+
+	/* Make sure a 'Bulk Action' is selected before submiting the form */
+	jq('#notification-bulk-manage').attr('disabled', 'disabled');
+
+	/* Remove the disabled attribute from the form submit button when bulk action has a value */
+	jq('#notification-select').on('change', function(){
+		jq('#notification-bulk-manage').attr('disabled', jq(this).val().length <= 0);
+	});
+
 	/* Close site wide notices in the sidebar */
 	jq('#close-notice').on( 'click', function() {
 		jq(this).addClass('loading');
@@ -1602,9 +1623,10 @@ jq(document).ready( function() {
 	}
 
 	// Set the last id to request after
+	var first_item_recorded = 0;
 	jq( document ).on( 'heartbeat-send.buddypress', function( e, data ) {
 
-		firstrow = 0;
+		first_item_recorded = 0;
 
 		// First row is default latest activity id
 		if ( jq( '#buddypress ul.activity-list li' ).first().prop( 'id' ) ) {
@@ -1612,12 +1634,12 @@ jq(document).ready( function() {
 			timestamp = jq( '#buddypress ul.activity-list li' ).first().prop( 'class' ).match( /date-recorded-([0-9]+)/ );
 
 			if ( timestamp ) {
-				firstrow = timestamp[1];
+				first_item_recorded = timestamp[1];
 			}
 		}
 
-		if ( 0 === activity_last_recorded || Number( firstrow ) > activity_last_recorded ) {
-			activity_last_recorded = Number( firstrow );
+		if ( 0 === activity_last_recorded || Number( first_item_recorded ) > activity_last_recorded ) {
+			activity_last_recorded = Number( first_item_recorded );
 		}
 
 		data.bp_activity_last_recorded = activity_last_recorded;
