@@ -296,16 +296,28 @@ add_action( 'groups_promoted_member', 'groups_notification_promoted_member', 10,
  *
  * @since BuddyPress (1.0.0)
  *
- * @param BP_Groups_Group $group Group object.
- * @param BP_Groups_Member $member Member object.
- * @param int $inviter_user_id ID of the user who sent the invite.
- * @return bool|null False on failure.
+ * @param 	BP_Groups_Group  $group  Group object.
+ * @param 	BP_Groups_Member  $member  Member object.
+ * @param 	int  $inviter_user_id  ID of the user who sent the invite.
+ * @param 	bool  $resend  Whether to resend notification email if already sent.
+ * @return 	bool|null 	False on failure.
  */
-function groups_notification_group_invites( &$group, &$member, $inviter_user_id ) {
+function groups_notification_group_invites( &$group, &$member, $inviter_user_id, $resend = false ) {
 
-	// Bail if member has already been invited
-	if ( ! empty( $member->invite_sent ) ) {
-		return;
+	// Bail if the group and member objects are not populated.
+	if ( empty( $group->id ) || empty( $member->id ) ) {
+		return false;
+	}
+
+	// Bail if the passed $inviter_user_id isn't the inviter as recorded in the BP_Groups_Member object.
+	// @TODO: This will be resolved by #5911's change to groups_check_user_has_invite()
+	if ( $inviter_user_id != $member->inviter_id ) {
+		return false;
+	}
+
+	// Bail if member has already been invited and $resend isn't specified.
+	if ( ! $resend && ! empty( $member->invite_sent ) ) {
+		return true;
 	}
 
 	// @todo $inviter_ud may be used for caching, test without it
@@ -363,9 +375,11 @@ To view %5$s\'s profile visit: %6$s
 	$subject = apply_filters_ref_array( 'groups_notification_group_invites_subject', array( $subject, &$group ) );
 	$message = apply_filters_ref_array( 'groups_notification_group_invites_message', array( $message, &$group, $inviter_name, $inviter_link, $invites_link, $group_link, $settings_link ) );
 
-	wp_mail( $to, $subject, $message );
+	$success = wp_mail( $to, $subject, $message );
 
 	do_action( 'bp_groups_sent_invited_email', $invited_user_id, $subject, $message, $group );
+
+	return $success;
 }
 
 /** Notifications *************************************************************/
