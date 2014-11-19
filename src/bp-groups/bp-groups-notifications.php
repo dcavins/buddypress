@@ -300,7 +300,7 @@ add_action( 'groups_promoted_member', 'groups_notification_promoted_member', 10,
  * @param 	BP_Groups_Member  $member  Member object.
  * @param 	int  $inviter_user_id  ID of the user who sent the invite.
  * @param 	bool  $resend  Whether to resend notification email if already sent.
- * @return 	bool|null 	False on failure.
+ * @return 	bool False on failure, true if success or nothing needed to be done.
  */
 function groups_notification_group_invites( &$group, &$member, $inviter_user_id, $resend = false ) {
 
