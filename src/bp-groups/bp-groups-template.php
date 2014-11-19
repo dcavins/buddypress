@@ -1877,58 +1877,57 @@ function bp_group_get_invite_status( $group_id = false ) {
 }
 
 /**
- * Can the logged-in user send invitations in the specified group?
+ * Can the logged-in or specified user send invitations in the specified group?
  *
  * @since BuddyPress (1.5.0)
  *
- * @param int $group_id Optional. The ID of the group whose status you want to
- *        check. Default: the ID of the current group.
+ * @param int $group_id (optional) The ID of the group whose status you want to
+ *        check.
+ * @param int $user_id (optional) The ID of the user to check. Added BuddyPress (2.2.0)
  * @return bool $can_send_invites
  */
-function bp_groups_user_can_send_invites( $group_id = false ) {
-	global $bp;
-
+function bp_groups_user_can_send_invites( $group_id = false, $user_id = false ) {
 	$can_send_invites = false;
 	$invite_status    = false;
 
-	if ( is_user_logged_in() ) {
-		if ( bp_current_user_can( 'bp_moderate' ) ) {
+	// If $user_id isn't specified, we check against the logged-in user.
+	if ( ! $user_id ) {
+		$user_id = bp_loggedin_user_id();
+	}
+
+	if ( $user_id ) {
+		if ( user_can( $user_id, 'bp_moderate' ) ) {
 			// Super admins can always send invitations
 			$can_send_invites = true;
-
 		} else {
-			// If no $group_id is provided, default to the current group id
-			if ( !$group_id )
-				$group_id = isset( $bp->groups->current_group->id ) ? $bp->groups->current_group->id : 0;
+			if ( ! $group_id ) {
+				$group_id = bp_get_current_group_id();
+			}
+			if ( $group_id ) {
+				$invite_status = bp_group_get_invite_status( $group_id );
+				if ( $invite_status ) {
+					switch ( $invite_status ) {
+						case 'admins' :
+							if ( groups_is_user_admin( $user_id, $group_id ) )
+								$can_send_invites = true;
+							break;
 
-			// If no group has been found, bail
-			if ( !$group_id )
-				return false;
+						case 'mods' :
+							if ( groups_is_user_mod( $user_id, $group_id ) || groups_is_user_admin( $user_id, $group_id ) )
+								$can_send_invites = true;
+							break;
 
-			$invite_status = bp_group_get_invite_status( $group_id );
-			if ( !$invite_status )
-				return false;
-
-			switch ( $invite_status ) {
-				case 'admins' :
-					if ( groups_is_user_admin( bp_loggedin_user_id(), $group_id ) )
-						$can_send_invites = true;
-					break;
-
-				case 'mods' :
-					if ( groups_is_user_mod( bp_loggedin_user_id(), $group_id ) || groups_is_user_admin( bp_loggedin_user_id(), $group_id ) )
-						$can_send_invites = true;
-					break;
-
-				case 'members' :
-					if ( groups_is_user_member( bp_loggedin_user_id(), $group_id ) )
-						$can_send_invites = true;
-					break;
+						case 'members' :
+							if ( groups_is_user_member( $user_id, $group_id ) )
+								$can_send_invites = true;
+							break;
+					}
+				}
 			}
 		}
 	}
 
-	return apply_filters( 'bp_groups_user_can_send_invites', $can_send_invites, $group_id, $invite_status );
+	return apply_filters( 'bp_groups_user_can_send_invites', $can_send_invites, $group_id, $invite_status, $user_id );
 }
 
 /**
