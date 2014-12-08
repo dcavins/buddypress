@@ -195,6 +195,7 @@ class BP_Activity_Template {
 			'per_page'          => 20,
 			'page_arg'          => 'acpage',
 			'max'               => false,
+			'count_total'       => false,
 			'sort'              => false,
 			'include'           => false,
 			'exclude'           => false,
@@ -226,6 +227,7 @@ class BP_Activity_Template {
 			$this->activities = bp_activity_get_specific( array(
 				'activity_ids'      => explode( ',', $include ),
 				'max'               => $max,
+				'count_total'       => $count_total,
 				'page'              => $this->pag_page,
 				'per_page'          => $this->pag_num,
 				'sort'              => $sort,
@@ -240,6 +242,7 @@ class BP_Activity_Template {
 			$this->activities = bp_activity_get( array(
 				'display_comments'  => $display_comments,
 				'max'               => $max,
+				'count_total'       => $count_total,
 				'per_page'          => $this->pag_num,
 				'page'              => $this->pag_page,
 				'sort'              => $sort,
@@ -447,6 +450,8 @@ class BP_Activity_Template {
  *           pagination links. Default: 'acpage'.
  *     @type int|bool $max Maximum number of results to return.
  *           Default: false (unlimited).
+ *     @type string|bool $count_total If true, an additional DB query is run to
+ *           count the total activity items for the query. Default: false.
  *     @type string $sort 'ASC' or 'DESC'. Default: 'DESC'.
  *     @type array|bool $exclude Array of activity IDs to exclude. Default: false.
  *     @type array|bool $in Array of IDs to limit query by (IN). 'in' is
@@ -586,6 +591,7 @@ function bp_has_activities( $args = '' ) {
 		'page'              => 1,            // which page to load
 		'per_page'          => 20,           // number of items per page
 		'max'               => false,        // max number to return
+		'count_total'       => false,
 		'show_hidden'       => $show_hidden, // Show activity items that are hidden site-wide?
 		'spam'              => 'ham_only',   // Hide spammed items
 
@@ -719,6 +725,7 @@ function bp_has_activities( $args = '' ) {
 		'per_page'          => $per_page,
 		'page_arg'          => $page_arg,
 		'max'               => $max,
+		'count_total'       => $count_total,
 		'sort'              => $sort,
 		'include'           => $include,
 		'exclude'           => $exclude,
@@ -3308,29 +3315,40 @@ function bp_activity_filter_links( $args = false ) {
  */
 function bp_activity_can_comment() {
 	global $activities_template;
+	$bp = buddypress();
 
 	// Assume activity can be commented on
 	$can_comment = true;
 
 	// Determine ability to comment based on activity action name
 	$activity_action = bp_get_activity_action_name();
-	switch ( $activity_action ) {
 
-		// Maybe turn off for blog and forum updates
-		case 'new_blog_post'    :
-		case 'new_blog_comment' :
-		case 'new_forum_topic'  :
-		case 'new_forum_post'   :
-			if ( ! empty( $activities_template->disable_blogforum_replies ) ) {
-				$can_comment = false;
-			}
-			break;
-
-		// Turn off for activity comments
-		case 'activity_comment' :
-			$can_comment = false;
-			break;
+	$turn_off = 0;
+	if ( ! empty( $activities_template->disable_blogforum_replies ) ) {
+		$turn_off = 1;
 	}
+
+	$maybe_turn_off = array_fill_keys( array(
+		'new_blog_post',
+		'new_blog_comment',
+		'new_forum_topic',
+		'new_forum_post',
+	), $turn_off );
+
+	$maybe_turn_off['activity_comment'] = 1;
+
+	// Fetch all the tracked post types once.
+	if ( empty( $bp->activity->track ) ) {
+		$bp->activity->track = bp_activity_get_post_types_tracking_args();
+	}
+
+	foreach ( $bp->activity->track as $action => $tracking_args ) {
+		if ( empty( $tracking_args->activity_comment ) ) {
+			$maybe_turn_off[ $action ] = $turn_off;
+		}
+	}
+
+	$can_comment = empty( $maybe_turn_off[ $activity_action ] );
 
 	/**
 	 * Filters whether a comment can be made on an activity item.
@@ -4360,7 +4378,7 @@ function bp_activity_show_filters( $context = '' ) {
 
 		// Walk through the registered actions, and prepare an the
 		// select box options.
-		foreach ( buddypress()->activity->actions as $actions ) {
+		foreach ( bp_activity_get_actions() as $actions ) {
 			foreach ( $actions as $action ) {
 				if ( ! in_array( $context, (array) $action['context'] ) ) {
 					continue;

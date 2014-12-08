@@ -119,7 +119,6 @@ function bp_core_admin_backpat_page() {
  * BuddyPress combines all its messages into a single notice, to avoid a preponderance of yellow
  * boxes.
  *
- * @package BuddyPress Core
  * @since BuddyPress (1.5)
  *
  * @uses bp_current_user_can() to check current user permissions before showing the notices
@@ -138,23 +137,22 @@ function bp_core_print_admin_notices() {
 		return;
 	}
 
-	// Get the admin notices
-	$admin_notices = buddypress()->admin->notices;
+	$notice_types = array();
+	foreach ( buddypress()->admin->notices as $notice ) {
+		$notice_types[] = $notice['type'];
+	}
+	$notice_types = array_unique( $notice_types );
 
-	// Show the messages
-	if ( !empty( $admin_notices ) ) : ?>
+	foreach ( $notice_types as $type ) {
+		$notices = wp_list_filter( buddypress()->admin->notices, array( 'type' => $type ) );
+		printf( '<div id="message" class="fade %s">', sanitize_html_class( $type ) );
 
-		<div id="message" class="updated fade">
+		foreach ( $notices as $notice ) {
+			printf( '<p>%s</p>', $notice['message'] );
+		}
 
-			<?php foreach ( $admin_notices as $notice ) : ?>
-
-				<p><?php echo $notice; ?></p>
-
-			<?php endforeach; ?>
-
-		</div>
-
-	<?php endif;
+		printf( '</div>' );
+	}
 }
 add_action( 'admin_notices',         'bp_core_print_admin_notices' );
 add_action( 'network_admin_notices', 'bp_core_print_admin_notices' );
@@ -166,12 +164,12 @@ add_action( 'network_admin_notices', 'bp_core_print_admin_notices' );
  * box. It is recommended that you hook this function to admin_init, so that your messages are
  * loaded in time.
  *
- * @package BuddyPress Core
  * @since BuddyPress (1.5)
  *
- * @param string $notice The notice you are adding to the queue
+ * @param string $notice The notice you are adding to the queue.
+ * @param string $type The notice type; optional. Usually either "updated" or "error".
  */
-function bp_core_add_admin_notice( $notice = '' ) {
+function bp_core_add_admin_notice( $notice = '', $type = 'updated' ) {
 
 	// Do not add if the notice is empty
 	if ( empty( $notice ) ) {
@@ -184,7 +182,10 @@ function bp_core_add_admin_notice( $notice = '' ) {
 	}
 
 	// Add the notice
-	buddypress()->admin->notices[] = $notice;
+	buddypress()->admin->notices[] = array(
+		'message' => $notice,
+		'type'    => $type,
+	);
 }
 
 /**
@@ -239,7 +240,7 @@ function bp_core_activation_notice() {
 
 	// Add notice if no rewrite rules are enabled
 	if ( empty( $wp_rewrite->permalink_structure ) ) {
-		bp_core_add_admin_notice( sprintf( __( '<strong>BuddyPress is almost ready</strong>. You must <a href="%s">update your permalink structure</a> to something other than the default for it to work.', 'buddypress' ), admin_url( 'options-permalink.php' ) ) );
+		bp_core_add_admin_notice( sprintf( __( '<strong>BuddyPress is almost ready</strong>. You must <a href="%s">update your permalink structure</a> to something other than the default for it to work.', 'buddypress' ), admin_url( 'options-permalink.php' ) ), 'error' );
 	}
 
 	// Get BuddyPress instance
@@ -370,16 +371,32 @@ function bp_do_activation_redirect() {
  * Output the tabs in the admin area
  *
  * @since BuddyPress (1.5)
- * @param string $active_tab Name of the tab that is active
+ * @param string $active_tab Name of the tab that is active. Optional.
  */
 function bp_core_admin_tabs( $active_tab = '' ) {
-
-	// Declare local variables
 	$tabs_html    = '';
 	$idle_class   = 'nav-tab';
 	$active_class = 'nav-tab nav-tab-active';
+	$tabs         = apply_filters( 'bp_core_admin_tabs', bp_core_get_admin_tabs( $active_tab ) );
 
-	// Setup core admin tabs
+	// Loop through tabs and build navigation
+	foreach ( array_values( $tabs ) as $tab_data ) {
+		$is_current = (bool) ( $tab_data['name'] == $active_tab );
+		$tab_class  = $is_current ? $active_class : $idle_class;
+		$tabs_html .= '<a href="' . esc_url( $tab_data['href'] ) . '" class="' . esc_attr( $tab_class ) . '">' . esc_html( $tab_data['name'] ) . '</a>';
+	}
+
+	echo $tabs_html;
+	do_action( 'bp_admin_tabs' );
+}
+
+/**
+ * Get the data for the tabs in the admin area.
+ *
+ * @since BuddyPress (2.2.0)
+ * @param string $active_tab Name of the tab that is active. Optional.
+ */
+function bp_core_get_admin_tabs( $active_tab = '' ) {
 	$tabs = array(
 		'0' => array(
 			'href' => bp_get_admin_url( add_query_arg( array( 'page' => 'bp-components' ), 'admin.php' ) ),
@@ -408,21 +425,13 @@ function bp_core_admin_tabs( $active_tab = '' ) {
 		);
 	}
 
-	// Allow the tabs to be filtered
-	$tabs = apply_filters( 'bp_core_admin_tabs', $tabs );
-
-	// Loop through tabs and build navigation
-	foreach ( array_values( $tabs ) as $tab_data ) {
-		$is_current = (bool) ( $tab_data['name'] == $active_tab );
-		$tab_class  = $is_current ? $active_class : $idle_class;
-		$tabs_html .= '<a href="' . esc_url( $tab_data['href'] ) . '" class="' . esc_attr( $tab_class ) . '">' . esc_html( $tab_data['name'] ) . '</a>';
-	}
-
-	// Output the tabs
-	echo $tabs_html;
-
-	// Do other fun things
-	do_action( 'bp_admin_tabs' );
+	/**
+	 * Filters the tab data used in our wp-admin screens.
+	 *
+	 * @param array $tabs Tab data.
+	 * @since BuddyPress (2.2.0)
+	 */
+	return apply_filters( 'bp_core_get_admin_tabs', $tabs );
 }
 
 /** Help **********************************************************************/

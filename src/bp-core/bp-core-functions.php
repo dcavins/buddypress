@@ -93,23 +93,19 @@ function bp_core_get_table_prefix() {
 }
 
 /**
- * Sort an array of objects or arrays by alphabetically sorting by a specific key/property.
- *
- * For instance, if you have an array of WordPress post objects, you can sort
- * them by post_name as follows:
- *     $sorted_posts = bp_alpha_sort_by_key( $posts, 'post_name' );
+ * Sort an array of objects or arrays by a specific key/property.
  *
  * The main purpose for this function is so that you can avoid having to create
  * your own awkward callback function for usort().
  *
- * @since BuddyPress (1.9.0)
+ * @since BuddyPress (2.2.0)
  *
- * @param array $items The array to be sorted. Its constituent items can be
- *        either associative arrays or objects.
- * @param string|int $key The array index or property name to sort by.
- * @return array $items The sorted array.
+ * @param  array      $items The items to be sorted. Its constituent items can be either associative arrays or objects.
+ * @param  string|int $key   The array index or property name to sort by.
+ * @param  string     $type  Sort type. 'alpha' for alphabetical, 'num' for numeric. Default: 'alpha'.
+ * @return array      $items The sorted array.
  */
-function bp_alpha_sort_by_key( $items, $key ) {
+function bp_sort_by_key( $items, $key, $type = 'alpha' ) {
 	usort( $items, create_function( '$a, $b', '
 		$values = array( 0 => false, 1 => false, );
 		$func_args = func_get_args();
@@ -121,8 +117,13 @@ function bp_alpha_sort_by_key( $items, $key ) {
 			}
 		}
 
-		if ( $values[0] && $values[1] ) {
-			$cmp = strcmp( $values[0], $values[1] );
+		if ( isset( $values[0], $values[1] ) ) {
+			if ( "num" === "' . $type . '" ) {
+				$cmp = $values[0] - $values[1];
+			} else {
+				$cmp = strcmp( $values[0], $values[1] );
+			}
+
 			if ( 0 > $cmp ) {
 				$retval = -1;
 			} else if ( 0 < $cmp ) {
@@ -137,6 +138,23 @@ function bp_alpha_sort_by_key( $items, $key ) {
 	') );
 
 	return $items;
+}
+
+/**
+ * Sort an array of objects or arrays by alphabetically sorting by a specific key/property.
+ *
+ * For instance, if you have an array of WordPress post objects, you can sort
+ * them by post_name as follows:
+ *     $sorted_posts = bp_alpha_sort_by_key( $posts, 'post_name' );
+ *
+ * @since BuddyPress (1.9.0)
+ *
+ * @param  array      $items The items to be sorted. Its constituent items can be either associative arrays or objects.
+ * @param  string|int $key   The array index or property name to sort by.
+ * @return array      $items The sorted array.
+ */
+function bp_alpha_sort_by_key( $items, $key ) {
+	return bp_sort_by_key( $items, $key, 'alpha' );
 }
 
 /**
@@ -381,7 +399,16 @@ function bp_core_get_directory_page_ids() {
 	if ( !empty( $page_ids ) && is_array( $page_ids ) ) {
 		foreach( (array) $page_ids as $component_name => $page_id ) {
 			if ( empty( $component_name ) || empty( $page_id ) ) {
-				unset( $page_ids[$component_name] );
+				unset( $page_ids[ $component_name ] );
+			}
+
+			// 'register' and 'activate' do not have components, but should be whitelisted.
+			if ( bp_get_signup_allowed() && ( 'register' === $component_name || 'activate' === $component_name ) ) {
+				continue;
+			}
+
+			if ( ! bp_is_active( $component_name ) || 'trash' == get_post_status( $page_id ) ) {
+				unset( $page_ids[ $component_name ] );
 			}
 		}
 	}
@@ -565,6 +592,25 @@ function bp_core_add_page_mappings( $components, $existing = 'keep' ) {
 		restore_current_blog();
 	}
 }
+
+/**
+ * Remove the entry from bp_pages when the corresponding WP page is deleted.
+ *
+ * @since BuddyPress (2.2.0)
+ *
+ * @param int $post_id Post ID.
+ */
+function bp_core_on_directory_page_delete( $post_id ) {
+	$page_ids = bp_core_get_directory_page_ids();
+	$component_name = array_search( $post_id, $page_ids );
+
+	if ( ! empty( $component_name ) ) {
+		unset( $page_ids[ $component_name ] );
+	}
+
+	bp_core_update_directory_page_ids( $page_ids );
+}
+add_action( 'delete_post', 'bp_core_on_directory_page_delete' );
 
 /**
  * Create a default component slug from a WP page root_slug.

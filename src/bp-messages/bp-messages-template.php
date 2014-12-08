@@ -561,6 +561,88 @@ function bp_message_thread_delete_link() {
 	}
 
 /**
+ * Output the URL used for marking a single message thread as unread.
+ *
+ * Since this function directly outputs a URL, it is escaped.
+ *
+ * @since BuddyPress (2.2.0)
+ */
+function bp_the_message_thread_mark_unread_url() {
+	echo esc_url( bp_get_the_message_thread_mark_unread_url() );
+}
+	/**
+	 * Return the URL used for marking a single message thread as unread.
+	 *
+	 * @since BuddyPress (2.2.0)
+	 *
+	 * @return string
+	 */
+	function bp_get_the_message_thread_mark_unread_url() {
+
+		// Get the message ID.
+		$id = bp_get_message_thread_id();
+
+		// Get the args to add to the URL.
+		$args = array(
+			'action'     => 'unread',
+			'message_id' => $id
+		);
+
+		// Base unread URL.
+		$url = trailingslashit( bp_loggedin_user_domain() . bp_get_messages_slug() . '/' . bp_current_action() . '/unread' );
+
+		// Add the args to the URL.
+		$url = add_query_arg( $args, $url );
+
+		// Add the nonce.
+		$url = wp_nonce_url( $url, 'bp_message_thread_mark_unread_' . $id );
+
+		// Filter and return.
+		return apply_filters( 'bp_get_the_message_thread_mark_unread_url', $url );
+	}
+
+/**
+ * Output the URL used for marking a single message thread as read.
+ *
+ * Since this function directly outputs a URL, it is escaped.
+ *
+ * @since BuddyPress (2.2.0)
+ */
+function bp_the_message_thread_mark_read_url() {
+	echo esc_url( bp_get_the_message_thread_mark_read_url() );
+}
+	/**
+	 * Return the URL used for marking a single message thread as read
+	 *
+	 * @since BuddyPress (2.2.0)
+	 *
+	 * @return string
+	 */
+	function bp_get_the_message_thread_mark_read_url() {
+
+		// Get the message ID.
+		$id = bp_get_message_thread_id();
+
+		// Get the args to add to the URL.
+		$args = array(
+			'action'     => 'read',
+			'message_id' => $id
+		);
+
+		// Base read URL.
+		$url = trailingslashit( bp_loggedin_user_domain() . bp_get_messages_slug() . '/' . bp_current_action() . '/read' );
+
+		// Add the args to the URL.
+		$url = add_query_arg( $args, $url );
+
+		// Add the nonce.
+		$url = wp_nonce_url( $url, 'bp_message_thread_mark_read_' . $id );
+
+		// Filter and return.
+		return apply_filters( 'bp_get_the_message_thread_mark_read_url', $url );
+	}
+
+/**
  * Output the CSS class for the current thread.
  */
 function bp_message_css_class() {
@@ -617,6 +699,73 @@ function bp_message_thread_unread_count() {
 			: false;
 
 		return apply_filters( 'bp_get_message_thread_unread_count', $count );
+	}
+
+/**
+ * Output a thread's total message count.
+ *
+ * @since BuddyPress (2.2.0)
+ *
+ * @param int $thread_id Optional. ID of the thread. Defaults to current thread ID.
+ */
+function bp_message_thread_total_count( $thread_id = false ) {
+	echo bp_get_message_thread_total_count( $thread_id );
+}
+	/**
+	 * Get the current thread's total message count.
+	 *
+	 * @since BuddyPress (2.2.0)
+	 *
+	 * @param int $thread_id Optional. ID of the thread. Defaults to
+	 *        current thread ID.
+	 * @return int
+	 */
+	function bp_get_message_thread_total_count( $thread_id = false ) {
+		if ( false === $thread_id ) {
+			$thread_id = bp_get_message_thread_id();
+		}
+
+		$thread_template = new BP_Messages_Thread_Template( $thread_id, 'ASC', array(
+			'update_meta_cache' => false
+		) );
+
+		$count = 0;
+		if ( ! empty( $thread_template->message_count ) ) {
+			$count = intval( $thread_template->message_count );
+		}
+
+		return apply_filters( 'bp_get_message_thread_total_count', $count );
+	}
+
+/**
+ * Output markup for the current thread's total and unread count.
+ *
+ * @since Buddypress (2.2.0)
+ *
+ * @param int $thread_id Optional. ID of the thread. Default: current thread ID.
+ */
+function bp_message_thread_total_and_unread_count( $thread_id = false ) {
+	echo bp_get_message_thread_total_and_unread_count( $thread_id );
+}
+	/**
+	 * Get markup for the current thread's total and unread count.
+	 *
+	 * @param int $thread_id Optional. ID of the thread. Default: current thread ID.
+	 * @return string Markup displaying the total and unread count for the thread.
+	 */
+	function bp_get_message_thread_total_and_unread_count( $thread_id = false ) {
+		if ( false === $thread_id ) {
+			$thread_id = bp_get_message_thread_id();
+		}
+
+		$total  = bp_get_message_thread_total_count( $thread_id );
+		$unread = bp_get_message_thread_unread_count( $thread_id );
+
+		return sprintf(
+			'<span class="thread-count">(%1$s)</span> <span class="bp-screen-reader-text">%2$s</span>',
+			number_format_i18n( $total ),
+			sprintf( _n( '%d unread', '%d unread', $unread, 'buddypress' ), number_format_i18n( $unread ) )
+		);
 	}
 
 /**
@@ -856,10 +1005,12 @@ function bp_messages_content_value() {
 function bp_messages_options() {
 ?>
 
-	<?php _e( 'Select:', 'buddypress' ) ?>
+	<label for="message-type-select" class="bp-screen-reader-text">
+		<?php _e( 'Select:', 'buddypress' ) ?>
+	 </label>
 
 	<select name="message-type-select" id="message-type-select">
-		<option value=""></option>
+		<option value=""><?php _e( 'Select', 'buddypress' ); ?></option>
 		<option value="read"><?php _ex('Read', 'Message dropdown filter', 'buddypress') ?></option>
 		<option value="unread"><?php _ex('Unread', 'Message dropdown filter', 'buddypress') ?></option>
 		<option value="all"><?php _ex('All', 'Message dropdown filter', 'buddypress') ?></option>
@@ -875,6 +1026,24 @@ function bp_messages_options() {
 	<a href="#" id="delete_<?php echo bp_current_action(); ?>_messages"><?php _e( 'Delete Selected', 'buddypress' ); ?></a> &nbsp;
 
 <?php
+}
+
+/**
+ * Output the dropdown for bulk management of messages.
+ *
+ * @since BuddyPress (2.2.0)
+ */
+function bp_messages_bulk_management_dropdown() {
+	?>
+	<label class="bp-screen-reader-text" for="messages-select"><?php _e( 'Select Bulk Action', 'buddypress' ); ?></label>
+	<select name="messages_bulk_action" id="messages-select">
+		<option value="" selected="selected"><?php _e( 'Bulk Actions', 'buddypress' ); ?></option>
+		<option value="read"><?php _e( 'Mark read', 'buddypress' ); ?></option>
+		<option value="unread"><?php _e( 'Mark unread', 'buddypress' ); ?></option>
+		<option value="delete"><?php _e( 'Delete', 'buddypress' ); ?></option>
+	</select>
+	<input type="submit" id="messages-bulk-manage" class="button action" value="<?php esc_attr_e( 'Apply', 'buddypress' ); ?>">
+	<?php
 }
 
 /**
@@ -1300,11 +1469,10 @@ class BP_Messages_Thread_Template {
 	/**
 	 * Constructor method.
 	 *
-	 * @param int $thread_id ID of the message thread.
-	 * @param string $order 'ASC' or 'DESC'.
+	 * @see BP_Messages_Thread::populate() for full parameter info
 	 */
-	public function __construct( $thread_id, $order ) {
-		$this->thread        = new BP_Messages_Thread( $thread_id, $order );
+	public function __construct( $thread_id = 0, $order = 'ASC', $args = array() ) {
+		$this->thread        = new BP_Messages_Thread( $thread_id, $order, $args );
 		$this->message_count = count( $this->thread->messages );
 
 		$last_message_index                 = $this->message_count - 1;
@@ -1405,6 +1573,8 @@ class BP_Messages_Thread_Template {
  *           Default: if viewing a thread, the thread ID will be parsed from
  *           the URL (bp_action_variable( 0 )).
  *     @type string $order 'ASC' or 'DESC'. Default: 'ASC'.
+ *     @type bool $update_meta_cache Whether to pre-fetch metadata for
+ *           queried message items. Default: true.
  * }
  * @return bool True if there are messages to display, otherwise false.
  */
@@ -1412,15 +1582,20 @@ function bp_thread_has_messages( $args = '' ) {
 	global $thread_template;
 
 	$r = bp_parse_args( $args, array(
-		'thread_id' => false,
-		'order'     => 'ASC'
+		'thread_id'         => false,
+		'order'             => 'ASC',
+		'update_meta_cache' => true,
 	), 'thread_has_messages' );
 
 	if ( empty( $r['thread_id'] ) && bp_is_messages_component() && bp_is_current_action( 'view' ) ) {
 		$r['thread_id'] = (int) bp_action_variable( 0 );
 	}
 
-	$thread_template = new BP_Messages_Thread_Template( $r['thread_id'], $r['order'] );
+	// Set up extra args
+	$extra_args = $r;
+	unset( $extra_args['thread_id'], $extra_args['order'] );
+
+	$thread_template = new BP_Messages_Thread_Template( $r['thread_id'], $r['order'], $extra_args );
 
 	return $thread_template->has_messages();
 }
@@ -1825,15 +2000,47 @@ function bp_the_thread_message_content() {
 /**
  * Enable oEmbed support for Messages.
  *
- * There's no caching as BP 1.5 does not have a Messages meta API.
- *
  * @since BuddyPress (1.5.0)
  *
  * @see BP_Embed
- *
- * @todo Add Messages meta?
  */
 function bp_messages_embed() {
-	add_filter( 'embed_post_id', 'bp_get_message_thread_id' );
+	add_filter( 'embed_post_id',         'bp_get_the_thread_message_id' );
+	add_filter( 'bp_embed_get_cache',    'bp_embed_message_cache',      10, 3 );
+	add_action( 'bp_embed_update_cache', 'bp_embed_message_save_cache', 10, 3 );
 }
-add_action( 'messages_box_loop_start', 'bp_messages_embed' );
+add_action( 'thread_loop_start', 'bp_messages_embed' );
+
+/**
+ * Fetch a private message item's cached embeds.
+ *
+ * Used during {@link BP_Embed::parse_oembed()} via {@link bp_messages_embed()}.
+ *
+ * @since BuddyPress (2.2.0)
+ *
+ * @param string $cache An empty string passed by BP_Embed::parse_oembed() for
+ *        functions like this one to filter.
+ * @param int $id The ID of the message item.
+ * @param string $cachekey The cache key generated in BP_Embed::parse_oembed().
+ * @return mixed The cached embeds for this message item.
+ */
+function bp_embed_message_cache( $cache, $id, $cachekey ) {
+	return bp_messages_get_meta( $id, $cachekey );
+}
+
+/**
+ * Set a private message item's embed cache.
+ *
+ * Used during {@link BP_Embed::parse_oembed()} via {@link bp_messages_embed()}.
+ *
+ * @since BuddyPress (2.2.0)
+ *
+ * @param string $cache An empty string passed by BP_Embed::parse_oembed() for
+ *        functions like this one to filter.
+ * @param string $cachekey The cache key generated in BP_Embed::parse_oembed().
+ * @param int $id The ID of the message item.
+ * @return bool True on success, false on failure.
+ */
+function bp_embed_message_save_cache( $cache, $cachekey, $id ) {
+	bp_messages_update_meta( $id, $cachekey, $cache );
+}

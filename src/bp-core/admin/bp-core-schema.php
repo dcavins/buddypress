@@ -136,7 +136,7 @@ function bp_core_install_activity_streams() {
 				type varchar(75) NOT NULL,
 				action text NOT NULL,
 				content longtext NOT NULL,
-				primary_link varchar(255) NOT NULL,
+				primary_link text NOT NULL,
 				item_id bigint(20) NOT NULL,
 				secondary_item_id bigint(20) DEFAULT NULL,
 				date_recorded datetime NOT NULL,
@@ -302,6 +302,15 @@ function bp_core_install_private_messaging() {
 				date_sent datetime NOT NULL,
 				is_active tinyint(1) NOT NULL DEFAULT '0',
 				KEY is_active (is_active)
+			) {$charset_collate};";
+
+	$sql[] = "CREATE TABLE {$bp_prefix}bp_messages_meta (
+				id bigint(20) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+				message_id bigint(20) NOT NULL,
+				meta_key varchar(255) DEFAULT NULL,
+				meta_value longtext DEFAULT NULL,
+				KEY message_id (message_id),
+				KEY meta_key (meta_key)
 			) {$charset_collate};";
 
 	dbDelta( $sql );

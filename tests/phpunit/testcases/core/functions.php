@@ -188,6 +188,111 @@ class BP_Tests_Core_Functions extends BP_UnitTestCase {
 	}
 
 	/**
+	 * @group bp_sort_by_key
+	 */
+	public function test_bp_sort_by_key_arrays_num() {
+		$items = array(
+			array(
+				'foo' => 'bar',
+				'value' => 5,
+			),
+			array(
+				'foo' => 'bar',
+				'value' => 10,
+			),
+			array(
+				'foo' => 'bar',
+				'value' => 1,
+			),
+		);
+
+		$expected = array(
+			array(
+				'foo' => 'bar',
+				'value' => 1,
+			),
+			array(
+				'foo' => 'bar',
+				'value' => 5,
+			),
+			array(
+				'foo' => 'bar',
+				'value' => 10,
+			),
+		);
+
+		$this->assertEquals( $expected, bp_sort_by_key( $items, 'value', 'num' ) );
+	}
+
+	/**
+	 * @group bp_sort_by_key
+	 */
+	public function test_bp_sort_by_key_objects_num() {
+		$items = array(
+			new stdClass,
+			new stdClass,
+			new stdClass,
+		);
+		$items[0]->foo = 'bar';
+		$items[0]->value = 5;
+		$items[1]->foo = 'bar';
+		$items[1]->value = 10;
+		$items[2]->foo = 'bar';
+		$items[2]->value = 1;
+
+		$expected = array(
+			new stdClass,
+			new stdClass,
+			new stdClass,
+		);
+		$expected[0]->foo = 'bar';
+		$expected[0]->value = 1;
+		$expected[1]->foo = 'bar';
+		$expected[1]->value = 5;
+		$expected[2]->foo = 'bar';
+		$expected[2]->value = 10;
+
+		$this->assertEquals( $expected, bp_sort_by_key( $items, 'value', 'num' ) );
+	}
+
+	/**
+	 * @group bp_sort_by_key
+	 */
+	public function test_bp_sort_by_key_num_should_respect_0() {
+		$items = array(
+			array(
+				'foo' => 'bar',
+				'value' => 2,
+			),
+			array(
+				'foo' => 'bar',
+				'value' => 0,
+			),
+			array(
+				'foo' => 'bar',
+				'value' => 4,
+			),
+		);
+
+		$expected = array(
+			array(
+				'foo' => 'bar',
+				'value' => 0,
+			),
+			array(
+				'foo' => 'bar',
+				'value' => 2,
+			),
+			array(
+				'foo' => 'bar',
+				'value' => 4,
+			),
+		);
+
+		$this->assertEquals( $expected, bp_sort_by_key( $items, 'value', 'num' ) );
+	}
+
+	/**
 	 * @group bp_alpha_sort_by_key
 	 */
 	public function test_bp_alpha_sort_by_key_arrays() {
@@ -278,6 +383,132 @@ class BP_Tests_Core_Functions extends BP_UnitTestCase {
 		restore_current_blog();
 
 		$this->assertFalse( wp_cache_get( 'directory_pages', 'bp' ) );
+	}
+
+	/**
+	 * @group bp_core_get_directory_page_ids
+	 */
+	public function test_bp_core_get_directory_page_ids_on_directory_page_to_trash() {
+		$old_page_ids = bp_core_get_directory_page_ids();
+
+		// Grab the and remove the first page.
+		foreach ( $old_page_ids as $component => $page_id ) {
+			$p = $page_id;
+			unset( $old_page_ids[ $component ] );
+			break;
+		}
+
+		// Move page to trash.
+		wp_delete_post( $p, false );
+
+		$new_page_ids = bp_core_get_directory_page_ids();
+
+		$this->assertEquals( $old_page_ids, $new_page_ids );
+	}
+
+	/**
+	 * @group bp_core_get_directory_page_ids
+	 */
+	public function test_bp_core_get_directory_page_ids_on_directory_page_delete() {
+		$old_page_ids = bp_core_get_directory_page_ids();
+
+		// Grab the and remove the first page.
+		foreach ( $old_page_ids as $component => $page_id ) {
+			$p = $page_id;
+			unset( $old_page_ids[ $component ] );
+			break;
+		}
+
+		// Force delete page.
+		wp_delete_post( $p, true );
+
+		$new_page_ids = bp_core_get_directory_page_ids();
+
+		$this->assertEquals( $old_page_ids, $new_page_ids );
+	}
+
+	/**
+	 * @group bp_core_get_directory_page_ids
+	 */
+	public function test_bp_core_get_directory_page_ids_on_non_directory_page_delete() {
+		$old_page_ids = bp_core_get_directory_page_ids();
+
+		$p = $this->factory->post->create( array(
+			'post_status' => 'publish',
+			'post_type' => 'page',
+		) );
+
+		// Force delete page.
+		wp_delete_post( $p, true );
+
+		$new_page_ids = bp_core_get_directory_page_ids();
+
+		$this->assertEquals( $old_page_ids, $new_page_ids );
+	}
+
+	/**
+	 * @group bp_core_get_directory_page_ids
+	 */
+	public function test_bp_core_get_directory_page_ids_non_active_component() {
+		$old_page_ids = bp_core_get_directory_page_ids();
+		$bp = buddypress();
+
+		// Grab the and remove the first page.
+		foreach ( $old_page_ids as $component => $page_id ) {
+			$p = $page_id;
+			$c = $component;
+			unset( $old_page_ids[ $component ] );
+			break;
+		}
+
+		// Deactivate component.
+		unset( $bp->active_components[ $c ] );
+
+		$new_page_ids = bp_core_get_directory_page_ids();
+
+		// Restore components.
+		$bp->active_components[ $c ] = 1;
+
+		$this->assertEquals( $old_page_ids, $new_page_ids );
+	}
+
+	/**
+	 * @group bp_core_get_directory_page_ids
+	 */
+	public function test_bp_core_get_directory_page_ids_should_contain_register_and_activet_pages_when_registration_is_open() {
+		add_filter( 'bp_get_signup_allowed', '__return_true', 999 );
+
+		$ac = buddypress()->active_components;
+		bp_core_add_page_mappings( array_keys( $ac ) );
+
+		$page_ids = bp_core_get_directory_page_ids();
+		$page_names = array_keys( $page_ids );
+
+		$this->assertContains( 'register', $page_names );
+		$this->assertContains( 'activate', $page_names );
+
+		remove_filter( 'bp_get_signup_allowed', '__return_true', 999 );
+	}
+
+	/**
+	 * @group bp_core_get_directory_page_ids
+	 */
+	public function test_bp_core_get_directory_page_ids_should_not_contain_register_and_activet_pages_when_registration_is_closed() {
+
+		// Make sure the pages exist, to verify they're filtered out.
+		add_filter( 'bp_get_signup_allowed', '__return_true', 999 );
+		$ac = buddypress()->active_components;
+		bp_core_add_page_mappings( array_keys( $ac ) );
+		remove_filter( 'bp_get_signup_allowed', '__return_true', 999 );
+
+		add_filter( 'bp_get_signup_allowed', '__return_false', 999 );
+		$page_ids = bp_core_get_directory_page_ids();
+		remove_filter( 'bp_get_signup_allowed', '__return_false', 999 );
+
+		$page_names = array_keys( $page_ids );
+
+		$this->assertNotContains( 'register', $page_names );
+		$this->assertNotContains( 'activate', $page_names );
 	}
 
 	/**
