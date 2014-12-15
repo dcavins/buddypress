@@ -2792,6 +2792,8 @@ class BP_Groups_Member {
  *   - 'template_file' The template file that will be used to load the content
  *     of your main extension tab. Defaults to 'groups/single/plugins.php'.
  *   - 'screens' A multi-dimensional array, described below
+ * 	 - 'access' Which users should be allowed to visit the plugin's tab. Since BuddyPress (2.1.0).
+ * 	 - 'show_tab' Which users should be able to see the plugin's tab. Since BuddyPress (2.1.0).
  *
  * BP_Group_Extension uses the concept of "settings screens". There are three
  * contexts for settings screens:
@@ -3082,7 +3084,7 @@ class BP_Group_Extension {
 	 *       parent::init( $args );
 	 *   }
 	 *
-	 * @since BuddyPress (1.8)
+	 * @since BuddyPress (1.8.0)
 	 * @param array $args {
 	 *     Array of initialization arguments.
 	 *     @type string $slug Unique, URL-safe identifier for your
@@ -3109,6 +3111,21 @@ class BP_Group_Extension {
 	 *     @type array $screens A multi-dimensional array of configuration
 	 *           information for the extension screens. See docblock of
 	 *           {@link BP_Group_Extension} for more details.
+	 *     @type string $access Which users should be allowed to visit the 
+	 *			 plugin's tab.
+	 *			 Possible values: 'anyone', 'loggedin', 'member',
+	 *        	 'mod', 'admin' or 'noone'.
+	 *			 ('member', 'mod', 'admin' refer to user's role in group.)
+	 * 			 Defaults to 'anyone' for public groups and 'member' for 
+	 *			 private groups. Since BuddyPress (2.1.0).
+	 *     @type string $show_tab Which users should be able to see the 
+	 *			 plugin's tab.
+	 *			 Tested against user's role in group. 
+	 *			 Possible values: 'anyone', 'loggedin', 'member',
+	 *        	 'mod', 'admin' or 'noone'.
+	 *			 ('member', 'mod', 'admin' refer to user's role in group.)
+	 * 			 Defaults to 'anyone' for public groups and 'member' for 
+	 *			 private groups. Since BuddyPress (2.1.0)
 	 * }
 	 */
 	public function init( $args = array() ) {
