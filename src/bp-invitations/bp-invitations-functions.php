@@ -14,6 +14,9 @@ if ( !defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+/** Create ********************************************************************/
+
 /**
  * Add an invitation to a specific user, from a specific user, related to a 
  * specific component.
@@ -114,52 +117,64 @@ function bp_invitations_add_invitation( $args = array() ) {
 	return $invitation->save();
 }
 
+
+/** Retrieve ******************************************************************/
+
 /**
  * Get a specific invitation by its ID.
  *
  * @since BuddyPress (2.3.0)
  *
  * @param int $id ID of the invitation.
- * @return BP_Invitations_Invitation
+ * @return BP_Invitations_Invitation object
  */
-function bp_invitations_get_invitation( $id ) {
+function bp_invitations_get_invitation_by_id( $id ) {
 	return new BP_Invitations_Invitation( $id );
 }
 
 /**
- * Delete a specific invitation by its ID.
- *
- * Used when rejecting invitations or membership requests. 
+ * Get invitations, based on provided filter parameters.
  *
  * @since BuddyPress (2.3.0)
  *
- * @param int $id ID of the invitation to delete.
- * @return bool True on success, false on failure.
+ * @param array $args {
+ *     Associative array of arguments. All arguments but $page and
+ *     $per_page can be treated as filter values for get_where_sql()
+ *     and get_query_clauses(). All items are optional.
+ *     @type int|array $id ID of invitation being updated. Can be an
+ *           array of IDs.
+ *     @type int|array $user_id ID of user being queried. Can be an
+ *           array of user IDs.
+ *     @type int|array $inviter_id ID of user who created the invitation.
+ *			 Can be an array of user IDs.
+ *     @type string|array $invitee_email Email address of invited users
+ *			 being queried. Can be an array of email addresses.
+ *     @type string|array $component_name Name of the component to
+ *           filter by. Can be an array of component names.
+ *     @type string|array $component_action Name of the action to
+ *           filter by. Can be an array of actions.
+ *     @type int|array $item_id ID of associated item. Can be an array
+ *           of multiple item IDs.
+ *     @type int|array $secondary_item_id ID of secondary associated
+ *           item. Can be an array of multiple IDs.
+ *     @type string $invite_sent Limit to draft, sent or all invitations. 
+ *			 'draft' returns only unsent invitations, 'sent' returns only 
+ *			 sent invitations, 'all' returns all. Default: 'all'.
+ *     @type string $search_terms Term to match against component_name
+ *           or component_action fields.
+ *     @type string $order_by Database column to order invitations by.
+ *     @type string $sort_order Either 'ASC' or 'DESC'.
+ *     @type string $order_by Field to order results by.
+ *     @type string $sort_order ASC or DESC.
+ *     @type int $page Number of the current page of results. Default:
+ *           false (no pagination - all items).
+ *     @type int $per_page Number of items to show per page. Default:
+ *           false (no pagination - all items).
+ * }
+ * @return array Located invitations.
  */
-function bp_invitations_delete_invitation( $id ) {
-	//@TODO: access check
-	// if ( ! bp_notifications_check_notification_access( bp_loggedin_user_id(), $id ) ) {
-	// 	return false;
-	// }
-
-	return BP_Invitations_Invitation::delete_by_id( $id );
-}
-
-/**
- * Mark invitation as sent by invitation ID.
- *
- * @since BuddyPress (2.3.0)
- *
- * @param int $id The ID of the invitation to mark as sent.
- * @return bool True on success, false on failure.
- */
-function bp_invitations_mark_as_sent( $id ) {
-	//@TODO: access check
-	// if ( ! bp_notifications_check_notification_access( bp_loggedin_user_id(), $id ) ) {
-	// 	return false;
-	// }
-
-	return BP_Invitations_Invitation::mark_as_sent( $id );
+function bp_invitations_get_invitations( $args ) {
+	return BP_Invitations_Invitation::get( $args );
 }
 
 /**
@@ -169,7 +184,7 @@ function bp_invitations_mark_as_sent( $id ) {
  *
  * @param int $user_id ID of the user whose incoming invitations are being 
  * 		  fetched.
- * @return array
+ * @return array Located invitations.
  */
 function bp_invitations_get_incoming_invitations_for_user( $user_id = 0 ) {
 
@@ -198,7 +213,7 @@ function bp_invitations_get_incoming_invitations_for_user( $user_id = 0 ) {
  *
  * @param int $user_id ID of the user whose incoming invitations are being 
  * 		  fetched.
- * @return array
+ * @return array Located invitations.
  */
 function bp_invitations_get_outgoing_invitations_for_user( $user_id = 0 ) {
 
@@ -220,148 +235,71 @@ function bp_invitations_get_outgoing_invitations_for_user( $user_id = 0 ) {
 	return apply_filters( 'bp_invitations_get_incoming_invitations_for_user', $notifications, $user_id );
 }
 
-// /**
-//  * Get notifications for a specific user.
-//  *
-//  * @since BuddyPress (1.9.0)
-//  *
-//  * @param int $user_id ID of the user whose notifications are being fetched.
-//  * @param string $format Format of the returned values. 'string' returns HTML,
-//  *        while 'object' returns a structured object for parsing.
-//  * @return mixed Object or array on success, false on failure.
-//  */
-// function bp_notifications_get_notifications_for_user( $user_id, $format = 'string' ) {
+/** Update ********************************************************************/
 
-// 	// Setup local variables
-// 	$bp = buddypress();
+/**
+ * Update invitation, based on provided filter parameters.
+ *
+ * @since BuddyPress (2.3.0)
+ *
+ * @see BP_Invitations_Invitation::get() for a description of
+ *      accepted update/where arguments.
+ *
+ * @param array $update_args Associative array of fields to update,
+ *        and the values to update them to. Of the format
+ *            array( 'user_id' => 4, 'component_name' => 'groups', )
+ * @param array $where_args Associative array of columns/values, to
+ *        determine which rows should be updated. Of the format
+ *            array( 'item_id' => 7, 'component_action' => 'members', )
+ * @return int|bool Number of rows updated on success, false on failure.
+ */
+function bp_invitations_update_invitation( $update_args = array(), $where_args = array() ) {
+	//@TODO: access check
+	// if ( ! bp_notifications_check_notification_access( bp_loggedin_user_id(), $id ) ) {
+	// 	return false;
+	// }
 
-// 	// Get notifications (out of the cache, or query if necessary)
-// 	$notifications         = bp_invitations_get_incoming_invitations_for_user( $user_id );
-// 	$grouped_notifications = array(); // Notification groups
-// 	$renderable            = array(); // Renderable notifications
+	return BP_Invitations_Invitation::mark_as_sent( $update_args = array(), $where_args = array() );
+}
 
-// 	// Group notifications by component and component_action and provide totals
-// 	for ( $i = 0, $count = count( $notifications ); $i < $count; ++$i ) {
-// 		$notification = $notifications[$i];
-// 		$grouped_notifications[$notification->component_name][$notification->component_action][] = $notification;
-// 	}
+/**
+ * Mark invitation as sent by invitation ID.
+ *
+ * @since BuddyPress (2.3.0)
+ *
+ * @param int $id The ID of the invitation to mark as sent.
+ * @return bool True on success, false on failure.
+ */
+function bp_invitations_mark_as_sent( $id ) {
+	//@TODO: access check
+	// if ( ! bp_notifications_check_notification_access( bp_loggedin_user_id(), $id ) ) {
+	// 	return false;
+	// }
 
-// 	// Bail if no notification groups
-// 	if ( empty( $grouped_notifications ) ) {
-// 		return false;
-// 	}
+	return BP_Invitations_Invitation::mark_as_sent( $id );
+}
 
-// 	// Calculate a renderable output for each notification type
-// 	foreach ( $grouped_notifications as $component_name => $action_arrays ) {
-
-// 		// Skip if group is empty
-// 		if ( empty( $action_arrays ) ) {
-// 			continue;
-// 		}
-
-// 		// Loop through each actionable item and try to map it to a component
-// 		foreach ( (array) $action_arrays as $component_action_name => $component_action_items ) {
-
-// 			// Get the number of actionable items
-// 			$action_item_count = count( $component_action_items );
-
-// 			// Skip if the count is less than 1
-// 			if ( $action_item_count < 1 ) {
-// 				continue;
-// 			}
-
-// 			// Callback function exists
-// 			if ( isset( $bp->{$component_name}->notification_callback ) && is_callable( $bp->{$component_name}->notification_callback ) ) {
-
-// 				// Function should return an object
-// 				if ( 'object' === $format ) {
-
-// 					// Retrieve the content of the notification using the callback
-// 					$content = call_user_func(
-// 						$bp->{$component_name}->notification_callback,
-// 						$component_action_name,
-// 						$component_action_items[0]->item_id,
-// 						$component_action_items[0]->secondary_item_id,
-// 						$action_item_count,
-// 						'array'
-// 					);
-
-// 					// Create the object to be returned
-// 					$notification_object = $component_action_items[0];
-
-// 					// Minimal backpat with non-compatible notification
-// 					// callback functions
-// 					if ( is_string( $content ) ) {
-// 						$notification_object->content = $content;
-// 						$notification_object->href    = bp_loggedin_user_domain();
-// 					} else {
-// 						$notification_object->content = $content['text'];
-// 						$notification_object->href    = $content['link'];
-// 					}
-
-// 					$renderable[] = $notification_object;
-
-// 				// Return an array of content strings
-// 				} else {
-// 					$content      = call_user_func( $bp->{$component_name}->notification_callback, $component_action_name, $component_action_items[0]->item_id, $component_action_items[0]->secondary_item_id, $action_item_count );
-// 					$renderable[] = $content;
-// 				}
-
-// 			// @deprecated format_notification_function - 1.5
-// 			} elseif ( isset( $bp->{$component_name}->format_notification_function ) && function_exists( $bp->{$component_name}->format_notification_function ) ) {
-// 				$renderable[] = call_user_func( $bp->{$component_name}->format_notification_function, $component_action_name, $component_action_items[0]->item_id, $component_action_items[0]->secondary_item_id, $action_item_count );
-
-// 			// Allow non BuddyPress components to hook in
-// 			} else {
-
-// 				// The array to reference with apply_filters_ref_array()
-// 				$ref_array = array(
-// 					$component_action_name,
-// 					$component_action_items[0]->item_id,
-// 					$component_action_items[0]->secondary_item_id,
-// 					$action_item_count,
-// 					$format
-// 				);
-
-// 				// Function should return an object
-// 				if ( 'object' === $format ) {
-
-// 					// Retrieve the content of the notification using the callback
-// 					$content = apply_filters_ref_array( 'bp_notifications_get_notifications_for_user', $ref_array );
-
-// 					// Create the object to be returned
-// 					$notification_object = $component_action_items[0];
-
-// 					// Minimal backpat with non-compatible notification
-// 					// callback functions
-// 					if ( is_string( $content ) ) {
-// 						$notification_object->content = $content;
-// 						$notification_object->href    = bp_loggedin_user_domain();
-// 					} else {
-// 						$notification_object->content = $content['text'];
-// 						$notification_object->href    = $content['link'];
-// 					}
-
-// 					$renderable[] = $notification_object;
-
-// 				// Return an array of content strings
-// 				} else {
-// 					$renderable[] = apply_filters_ref_array( 'bp_notifications_get_notifications_for_user', $ref_array );
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	// If renderable is empty array, set to false
-// 	if ( empty( $renderable ) ) {
-// 		$renderable = false;
-// 	}
-
-// 	// Filter and return
-// 	return apply_filters( 'bp_core_get_notifications_for_user', $renderable, $user_id, $format );
-// }
 
 /** Delete ********************************************************************/
+
+/**
+ * Delete a specific invitation by its ID.
+ *
+ * Used when rejecting invitations or membership requests. 
+ *
+ * @since BuddyPress (2.3.0)
+ *
+ * @param int $id ID of the invitation to delete.
+ * @return bool True on success, false on failure.
+ */
+function bp_invitations_delete_invitation( $id ) {
+	//@TODO: access check
+	// if ( ! bp_notifications_check_notification_access( bp_loggedin_user_id(), $id ) ) {
+	// 	return false;
+	// }
+
+	return BP_Invitations_Invitation::delete_by_id( $id );
+}
 
 /**
  * Delete all invitations by type.

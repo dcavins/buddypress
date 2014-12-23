@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class BP_Notifications_Component extends BP_Component {
+class BP_Invitations_Component extends BP_Component {
 
 	/**
 	 * Start the invitations component creation process.
@@ -25,10 +25,10 @@ class BP_Notifications_Component extends BP_Component {
 	public function __construct() {
 		parent::start(
 			'invitations',
-			_x( 'Notifications', 'Page <title>', 'buddypress' ),
+			_x( 'Invitations', 'Page <title>', 'buddypress' ),
 			buddypress()->plugin_dir,
 			array(
-				'adminbar_myaccount_order' => 30
+				'adminbar_myaccount_order' => 60
 			)
 		);
 	}
@@ -44,13 +44,13 @@ class BP_Notifications_Component extends BP_Component {
 	 */
 	public function includes( $includes = array() ) {
 		$includes = array(
-			'actions',
+			// 'actions',
 			'classes',
 			'screens',
-			'adminbar',
-			'template',
-			'functions',
-			'cache',
+			// 'adminbar',
+			// 'template',
+			// 'functions',
+			// 'cache',
 		);
 
 		parent::includes( $includes );
@@ -67,8 +67,8 @@ class BP_Notifications_Component extends BP_Component {
 	 */
 	public function setup_globals( $args = array() ) {
 		// Define a slug, if necessary
-		if ( !defined( 'BP_NOTIFICATIONS_SLUG' ) ) {
-			define( 'BP_NOTIFICATIONS_SLUG', $this->id );
+		if ( !defined( 'BP_INVITATIONS_SLUG' ) ) {
+			define( 'BP_INVITATIONS_SLUG', $this->id );
 		}
 
 		// Global tables for the invitations component
@@ -79,9 +79,9 @@ class BP_Notifications_Component extends BP_Component {
 		// All globals for the invitations component.
 		// Note that global_tables is included in this array.
 		$args = array(
-			'slug'          => BP_NOTIFICATIONS_SLUG,
+			'slug'          => BP_INVITATIONS_SLUG,
 			'has_directory' => false,
-			'search_string' => __( 'Search Notifications...', 'buddypress' ),
+			'search_string' => __( 'Search Invitations...', 'buddypress' ),
 			'global_tables' => $global_tables,
 		);
 
@@ -104,11 +104,11 @@ class BP_Notifications_Component extends BP_Component {
 
 		// Only grab count if we're on a user page and current user has access
 		if ( bp_is_user() && bp_user_has_access() ) {
-			$count    = bp_invitations_get_unread_notification_count( bp_displayed_user_id() );
+			$count    = bp_invitations_get_incoming_invitation_count( bp_displayed_user_id() );
 			$class    = ( 0 === $count ) ? 'no-count' : 'count';
-			$nav_name = sprintf( _x( 'Notifications <span class="%s">%s</span>', 'Profile screen nav', 'buddypress' ), esc_attr( $class ), number_format_i18n( $count ) );
+			$nav_name = sprintf( _x( 'Invitations <span class="%s">%s</span>', 'Profile screen nav', 'buddypress' ), esc_attr( $class ), number_format_i18n( $count ) );
 		} else {
-			$nav_name = _x( 'Notifications', 'Profile screen nav', 'buddypress' );
+			$nav_name = _x( 'Invitations', 'Profile screen nav', 'buddypress' );
 		}
 
 		// Add 'Notifications' to the main navigation
@@ -117,7 +117,7 @@ class BP_Notifications_Component extends BP_Component {
 			'slug'                    => $this->slug,
 			'position'                => 30,
 			'show_for_displayed_user' => bp_core_can_edit_settings(),
-			'screen_function'         => 'bp_invitations_screen_unread',
+			'screen_function'         => 'bp_invitations_screen_incoming',
 			'default_subnav_slug'     => 'unread',
 			'item_css_id'             => $this->id,
 		);

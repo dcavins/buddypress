@@ -489,7 +489,7 @@ class BP_Invitations_Invitation {
 	}
 
 	/**
-	 * Assemble query clauses, based on arrguments, to pass to $wpdb methods.
+	 * Assemble query clauses, based on arguments, to pass to $wpdb methods.
 	 *
 	 * The insert(), update(), and delete() methods of {@link wpdb} expect
 	 * arguments of the following forms:
@@ -534,19 +534,6 @@ class BP_Invitations_Invitation {
 			'format' => array(),
 		);
 
-
-			'user_id'           => $this->user_id,
-			'inviter_id'		=> $this->inviter_id,
-			'invitee_email'		=> $this->invitee_email,
-			'component_name'    => $this->component_name,
-			'component_action'  => $this->component_action,
-			'item_id'           => $this->item_id,
-			'secondary_item_id' => $this->secondary_item_id,
-			'content'			=> $this->content,
-			'date_modified'     => $this->date_modified,
-			'invite_sent'       => $this->invite_sent,
-
-
 		// id
 		if ( ! empty( $args['id'] ) ) {
 			$where_clauses['data']['id'] = absint( $args['id'] );
@@ -555,13 +542,13 @@ class BP_Invitations_Invitation {
 
 		// user_id
 		if ( ! empty( $args['user_id'] ) ) {
-			$where_clauses['data']['user_id'] = (int) $args['user_id'];
+			$where_clauses['data']['user_id'] = absint( $args['user_id'] );
 			$where_clauses['format'][] = '%d';
 		}
 		
 		// inviter_id
 		if ( ! empty( $args['inviter_id'] ) ) {
-			$where_clauses['data']['inviter_id'] = (int) $args['inviter_id'];
+			$where_clauses['data']['inviter_id'] = absint( $args['inviter_id'] );
 			$where_clauses['format'][] = '%d';
 		}
 
@@ -781,15 +768,7 @@ class BP_Invitations_Invitation {
 		$update = self::get_query_clauses( $update_args );
 		$where  = self::get_query_clauses( $where_args  );
 
-		// make sure we delete the invitation cache for the user on update
-		// @TODO: This won't fire if we're deleting a single invite by id.
-		if ( ! empty( $where_args['user_id'] ) ) {
-			wp_cache_delete( 'all_to_user_' . $where_args['user_id'], 'bp_invitations' );
-		}
-
-		if ( ! empty( $where_args['inviter_id'] ) ) {
-			wp_cache_delete( 'all_to_user_' . $where_args['inviter_id'], 'bp_invitations' );
-		}
+		do_action( 'bp_invitation_before_update', $where_args, $update_args );
 
 		return self::_update( $update['data'], $where['data'], $update['format'], $where['format'] );
 	}
@@ -800,7 +779,7 @@ class BP_Invitations_Invitation {
 	 * @since BuddyPress (2.3.0)
 	 *
 	 * @see BP_Invitations_Invitation::get() for a description of
-	 *      accepted update/where arguments.
+	 *      accepted where arguments.
 	 *
 	 * @param array $args Associative array of columns/values, to determine
 	 *        which rows should be deleted.  Of the format
