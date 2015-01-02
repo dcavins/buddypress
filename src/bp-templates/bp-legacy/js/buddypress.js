@@ -835,7 +835,7 @@ jq(document).ready( function() {
 
 	/* When a navigation tab is clicked - e.g. | All Groups | My Groups | */
 	jq('div.item-list-tabs').on( 'click', function(event) {
-		if ( jq(this).hasClass('no-ajax') )  {
+		if ( jq(this).hasClass('no-ajax')  || jq( event.target ).hasClass('no-ajax') )  {
 			return;
 		}
 
@@ -1205,7 +1205,7 @@ jq(document).ready( function() {
 	});
 
 	/* Add / Remove friendship buttons */
-	jq( '#members-dir-list, #members-group-list' ).on('click', '.friendship-button a', function() {
+	jq( '#members-dir-list, #members-group-list, #item-header' ).on('click', '.friendship-button a', function() {
 		jq(this).parent().addClass('loading');
 		var fid   = jq(this).attr('id'),
 			nonce   = jq(this).attr('href'),
@@ -1335,6 +1335,22 @@ jq(document).ready( function() {
 	jq('#buddypress').on( 'click', '.pending', function() {
 		return false;
 	});
+
+	/** Registration ***********************************************/
+
+	if ( jq('body').hasClass('register') ) {
+		var blog_checked = jq('#signup_with_blog');
+
+		// hide "Blog Details" block if not checked by default
+		if ( ! blog_checked.prop('checked') ) {
+			jq('#blog-details').toggle();
+		}
+
+		// toggle "Blog Details" block whenever checkbox is checked
+		blog_checked.change(function() {
+			jq('#blog-details').toggle();
+		});
+	}
 
 	/** Private Messaging ******************************************/
 

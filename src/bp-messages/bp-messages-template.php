@@ -183,8 +183,10 @@ class BP_Messages_Box_Template {
 				$base = '';
 			}
 
+			$add_args = array();
+
 			if ( ! empty( $this->search_terms ) ) {
-				$pag_args['s'] = $this->search_terms;
+				$add_args['s'] = $this->search_terms;
 			}
 
 			$this->pag_links = paginate_links( array(
@@ -194,7 +196,8 @@ class BP_Messages_Box_Template {
 				'current'   => $this->pag_page,
 				'prev_text' => _x( '&larr;', 'Message pagination previous text', 'buddypress' ),
 				'next_text' => _x( '&rarr;', 'Message pagination next text', 'buddypress' ),
-				'mid_size'  => 1
+				'mid_size'  => 1,
+				'add_args'  => $add_args,
 			) );
 		}
 	}
@@ -1071,7 +1074,8 @@ function bp_message_search_form() {
 	$search_value         = !empty( $_REQUEST['s'] ) ? stripslashes( $_REQUEST['s'] ) : $default_search_value; ?>
 
 	<form action="" method="get" id="search-message-form">
-		<label><input type="text" name="s" id="messages_search" <?php if ( $search_value === $default_search_value ) : ?>placeholder="<?php echo esc_html( $search_value ); ?>"<?php endif; ?> <?php if ( $search_value !== $default_search_value ) : ?>value="<?php echo esc_html( $search_value ); ?>"<?php endif; ?> /></label>
+		<label for="messages_search" class="bp-screen-reader-text"><?php _e( 'Search Messages', 'buddypress' ); ?></label>
+		<input type="text" name="s" id="messages_search" <?php if ( $search_value === $default_search_value ) : ?>placeholder="<?php echo esc_html( $search_value ); ?>"<?php endif; ?> <?php if ( $search_value !== $default_search_value ) : ?>value="<?php echo esc_html( $search_value ); ?>"<?php endif; ?> />
 		<input type="submit" id="messages_search_submit" name="messages_search_submit" value="<?php esc_attr_e( 'Search', 'buddypress' ) ?>" />
 	</form>
 

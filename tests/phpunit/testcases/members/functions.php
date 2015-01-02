@@ -37,6 +37,7 @@ class BP_Tests_Members_Functions extends BP_UnitTestCase {
 		$maybe_user = new WP_User( $user1 );
 		$this->assertEquals( 0, $maybe_user->ID );
 		unset( $maybe_user );
+		$this->restore_admins();
 
 		// 2. Admin cannot delete superadmin account
 		$user2 = $this->factory->user->create( array( 'role' => 'administrator' ) );
@@ -444,5 +445,61 @@ class BP_Tests_Members_Functions extends BP_UnitTestCase {
 	public function filter_usermeta_key( $key ) {
 		global $wpdb;
 		return $wpdb->prefix . $key;
+	}
+
+	/**
+	 * @group bp_core_process_spammer_status
+	 */
+	public function test_bp_core_process_spammer_status_make_spam_user_filter() {
+		add_filter( 'make_spam_user', array( $this, 'notification_filter_callback' ) );
+
+		$u1 = $this->factory->user->create();
+		$n = bp_core_process_spammer_status( $u1, 'spam' );
+
+		remove_filter( 'make_spam_user', array( $this, 'notification_filter_callback' ) );
+
+		$this->assertSame( 'make_spam_user', $this->filter_fired );
+
+	}
+
+	public function test_bp_core_process_spammer_status_make_ham_user_filter() {
+		add_filter( 'make_ham_user', array( $this, 'notification_filter_callback' ) );
+
+		$u1 = $this->factory->user->create();
+		$n = bp_core_process_spammer_status( $u1, 'ham' );
+
+		remove_filter( 'make_ham_user', array( $this, 'notification_filter_callback' ) );
+
+		$this->assertSame( 'make_ham_user', $this->filter_fired );
+
+	}
+
+	public function test_bp_core_process_spammer_status_bp_make_spam_user_filter() {
+		add_filter( 'bp_make_spam_user', array( $this, 'notification_filter_callback' ) );
+
+		$u1 = $this->factory->user->create();
+		$n = bp_core_process_spammer_status( $u1, 'spam' );
+
+		remove_filter( 'bp_make_spam_user', array( $this, 'notification_filter_callback' ) );
+
+		$this->assertSame( 'bp_make_spam_user', $this->filter_fired );
+
+	}
+
+	public function test_bp_core_process_spammer_status_bp_make_ham_user_filter() {
+		add_filter( 'bp_make_ham_user', array( $this, 'notification_filter_callback' ) );
+
+		$u1 = $this->factory->user->create();
+		$n = bp_core_process_spammer_status( $u1, 'ham' );
+
+		remove_filter( 'bp_make_ham_user', array( $this, 'notification_filter_callback' ) );
+
+		$this->assertSame( 'bp_make_ham_user', $this->filter_fired );
+
+	}
+
+	public function notification_filter_callback( $value ) {
+		$this->filter_fired = current_filter();
+		return $value;
 	}
 }

@@ -64,19 +64,18 @@ function bp_activity_do_mentions() {
  * @since BuddyPress (2.1.0)
  */
 function bp_activity_maybe_load_mentions_scripts() {
-	$retval =
-		bp_activity_do_mentions() &&
-		bp_is_user_active() &&
-		( bp_is_activity_component() || bp_is_blog_page() && is_singular() && comments_open() || is_admin() );
+	$mentions_enabled = bp_activity_do_mentions() && bp_is_user_active();
+	$load_mentions    = $mentions_enabled && ( bp_is_activity_component() || is_admin() );
 
 	/**
 	 * Filters whether or not BuddyPress should load mentions scripts and assets.
 	 *
 	 * @since BuddyPress (2.1.0)
 	 *
-	 * @param bool $retval True to load mentions assets, false otherwise.
+	 * @param bool $load_mentions True to load mentions assets, false otherwise.
+	 * @param bool $mentions_enabled True if mentions are enabled.
 	 */
-	return (bool) apply_filters( 'bp_activity_maybe_load_mentions_scripts', $retval );
+	return (bool) apply_filters( 'bp_activity_maybe_load_mentions_scripts', $load_mentions, $mentions_enabled );
 }
 
 /**
@@ -1417,12 +1416,14 @@ function bp_activity_get( $args = '' ) {
 		'search_terms'      => false,        // Pass search terms as a string
 		'meta_query'        => false,        // Filter by activity meta. See WP_Meta_Query for format
 		'date_query'        => false,        // Filter by date. See first parameter of WP_Date_Query for format
+		'filter_query'      => false,
 		'show_hidden'       => false,        // Show activity items that are hidden site-wide?
 		'exclude'           => false,        // Comma-separated list of activity IDs to exclude
 		'in'                => false,        // Comma-separated list or array of activity IDs to which you want to limit the query
 		'spam'              => 'ham_only',   // 'ham_only' (default), 'spam_only' or 'all'.
 		'update_meta_cache' => true,
 		'count_total'       => false,
+		'scope'             => false,
 
 		/**
 		 * Pass filters as an array -- all filter items can be multiple values comma separated:
@@ -1438,7 +1439,7 @@ function bp_activity_get( $args = '' ) {
 	) );
 
 	// Attempt to return a cached copy of the first page of sitewide activity.
-	if ( ( 1 === (int) $r['page'] ) && empty( $r['max'] ) && empty( $r['search_terms'] ) && empty( $r['meta_query'] ) && empty( $r['date_query'] ) && empty( $r['filter'] ) && empty( $r['exclude'] ) && empty( $r['in'] ) && ( 'DESC' === $r['sort'] ) && empty( $r['exclude'] ) && ( 'ham_only' === $r['spam'] ) ) {
+	if ( ( 1 === (int) $r['page'] ) && empty( $r['max'] ) && empty( $r['search_terms'] ) && empty( $r['meta_query'] ) && empty( $r['date_query'] ) && empty( $r['filter_query'] ) && empty( $r['filter'] ) && empty( $r['scope'] )&& empty( $r['exclude'] ) && empty( $r['in'] ) && ( 'DESC' === $r['sort'] ) && empty( $r['exclude'] ) && ( 'ham_only' === $r['spam'] ) ) {
 
 		$activity = wp_cache_get( 'bp_activity_sitewide_front', 'bp' );
 		if ( false === $activity ) {
@@ -1451,7 +1452,9 @@ function bp_activity_get( $args = '' ) {
 				'search_terms'      => $r['search_terms'],
 				'meta_query'        => $r['meta_query'],
 				'date_query'        => $r['date_query'],
+				'filter_query'      => $r['filter_query'],
 				'filter'            => $r['filter'],
+				'scope'             => $r['scope'],
 				'display_comments'  => $r['display_comments'],
 				'show_hidden'       => $r['show_hidden'],
 				'spam'              => $r['spam'],
@@ -1471,7 +1474,9 @@ function bp_activity_get( $args = '' ) {
 			'search_terms'     => $r['search_terms'],
 			'meta_query'       => $r['meta_query'],
 			'date_query'       => $r['date_query'],
+			'filter_query'     => $r['filter_query'],
 			'filter'           => $r['filter'],
+			'scope'            => $r['scope'],
 			'display_comments' => $r['display_comments'],
 			'show_hidden'      => $r['show_hidden'],
 			'exclude'          => $r['exclude'],
