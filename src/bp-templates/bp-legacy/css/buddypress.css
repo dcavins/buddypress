@@ -1374,8 +1374,17 @@ body.activity-permalink #buddypress ul.item-list li.activity-item {
 	overflow: auto;
 	list-style: none;
 }
-
-
+#buddypress .manage-invites-heading,
+#buddypress .invite-list-heading {
+	clear: none;	
+	margin: 20px 0;
+}
+#buddypress .manage-invites-heading {
+	font-size: 120%;
+}
+#buddypress .invite-list-heading {
+	font-size: 100%;
+}
 /*--------------------------------------------------------------
 3.9 - Private Messaging Threads
 --------------------------------------------------------------*/

@@ -1,3 +1,4 @@
+
 <div class="left-menu">
 
 	<div id="invite-list">
@@ -11,12 +12,14 @@
 	</div>
 
 </div><!-- .left-menu -->
-
+		
 <div class="main-column">
 
 	<?php do_action( 'bp_before_group_send_invites_list' ); ?>
 
 	<?php if ( bp_group_has_invites( bp_ajax_querystring( 'invite' ) . '&per_page=10' ) ) : ?>
+
+		<h3 class="invite-list-heading"><?php _e('Your current invitations','buddypress'); ?></h3>
 
 		<div id="pag-top" class="pagination">
 
@@ -74,17 +77,17 @@
 
 		</div>
 
-	<?php else : ?>
-		<div id="message" class="info">
-			<p><?php _e( 'Select people to invite from your friends list.', 'buddypress' ); ?></p>
+	<?php else: ?>
+
+		<div id="message">
+			<p class="info"><?php _e('Select members from your friends list to invite to this group.', 'buddypress'); ?></p>
 		</div>
+
 	<?php endif; ?>
 
 <?php do_action( 'bp_after_group_send_invites_list' ); ?>
 
 </div><!-- .main-column -->
-
-<div class="clear"></div>
 
 <div class="submit">
 	<input type="submit" name="submit" id="submit" value="<?php esc_attr_e( 'Send Invites', 'buddypress' ); ?>" />
