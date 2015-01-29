@@ -10,7 +10,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Output the members component slug.
@@ -223,6 +223,14 @@ class BP_Core_Members_Template {
 	var $in_the_loop;
 
 	/**
+	 * The unique string used for pagination queries
+	 *
+	 * @access public
+	 * @var public
+	 */
+	var $pag_arg;
+
+	/**
 	 * The page number being requested.
 	 *
 	 * @access public
@@ -276,8 +284,9 @@ class BP_Core_Members_Template {
 	 */
 	function __construct( $type, $page_number, $per_page, $max, $user_id, $search_terms, $include, $populate_extras, $exclude, $meta_key, $meta_value, $page_arg = 'upage', $member_type = '' ) {
 
-		$this->pag_page = !empty( $_REQUEST[$page_arg] ) ? intval( $_REQUEST[$page_arg] ) : (int) $page_number;
-		$this->pag_num  = !empty( $_REQUEST['num'] )   ? intval( $_REQUEST['num'] )   : (int) $per_page;
+		$this->pag_arg  = sanitize_key( $page_arg );
+		$this->pag_page = bp_sanitize_pagination_arg( $this->pag_arg, $page_number );
+		$this->pag_num  = bp_sanitize_pagination_arg( 'num',          $per_page    );
 		$this->type     = $type;
 
 		if ( !empty( $_REQUEST['letter'] ) )
@@ -304,7 +313,7 @@ class BP_Core_Members_Template {
 
 		if ( (int) $this->total_member_count && (int) $this->pag_num ) {
 			$pag_args = array(
-				$page_arg => '%#%',
+				$this->pag_arg => '%#%',
 			);
 
 			if ( defined( 'DOING_AJAX' ) && true === (bool) DOING_AJAX ) {
@@ -606,9 +615,9 @@ function bp_members_pagination_count() {
 
 		if ( 'active' == $members_template->type )
 			$pag = sprintf( _n( 'Viewing 1 active member', 'Viewing %1$s - %2$s of %3$s active members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
-		else if ( 'popular' == $members_template->type )
+		elseif ( 'popular' == $members_template->type )
 			$pag = sprintf( _n( 'Viewing 1 member with friends', 'Viewing %1$s - %2$s of %3$s members with friends', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
-		else if ( 'online' == $members_template->type )
+		elseif ( 'online' == $members_template->type )
 			$pag = sprintf( _n( 'Viewing 1 online member', 'Viewing %1$s - %2$s of %3$s online members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
 		else
 			$pag = sprintf( _n( 'Viewing 1 member', 'Viewing %1$s - %2$s of %3$s members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
@@ -789,7 +798,7 @@ function bp_member_user_email() {
 		 *
 		 * @since BuddyPress (1.2.5)
 		 *
-		 * @param string $user_email Email addres for the current member.
+		 * @param string $user_email Email address for the current member.
 		 */
 		return apply_filters( 'bp_get_member_user_email', $members_template->member->user_email );
 	}
@@ -1000,7 +1009,7 @@ function bp_member_last_active( $args = array() ) {
 			'active_format' => true
 		) );
 
-		// Backwards compatibilty for anyone forcing a 'true' active_format
+		// Backwards compatibility for anyone forcing a 'true' active_format
 		if ( true === $r['active_format'] ) {
 			$r['active_format'] = __( 'active %s', 'buddypress' );
 		}
@@ -1107,7 +1116,7 @@ function bp_member_profile_data( $args = '' ) {
 	 * to use outside of the loop.
 	 *
 	 * @param array $args {
-	 *     Array of config paramaters.
+	 *     Array of config parameters.
 	 *     @type string $field Name of the profile field.
 	 *     @type int $user_id ID of the user whose data is being fetched.
 	 *           Defaults to the current member in the loop, or if not
@@ -1185,7 +1194,7 @@ function bp_member_registered() {
 	function bp_get_member_registered() {
 		global $members_template;
 
-		$registered = esc_attr( bp_core_get_last_activity( $members_template->member->user_registered, _x( 'registered %s', 'Records the timestamp that the user registered into the activy stream', 'buddypress' ) ) );
+		$registered = esc_attr( bp_core_get_last_activity( $members_template->member->user_registered, _x( 'registered %s', 'Records the timestamp that the user registered into the activity stream', 'buddypress' ) ) );
 
 		/**
 		 * Filters the 'registered [x days ago]' string for the current member.
@@ -1847,7 +1856,7 @@ function bp_has_custom_activation_page() {
 }
 
 /**
- * Output the URL of the actvitation page.
+ * Output the URL of the activation page.
  */
 function bp_activation_page() {
 	echo bp_get_activation_page();
@@ -2182,7 +2191,7 @@ function bp_signup_avatar( $args = '' ) {
 			// Set default gravatar type
 			if ( empty( $bp->grav_default->user ) )
 				$default_grav = 'wavatar';
-			else if ( 'mystery' == $bp->grav_default->user )
+			elseif ( 'mystery' == $bp->grav_default->user )
 				$default_grav = $bp->plugin_url . 'bp-core/images/mystery-man.jpg';
 			else
 				$default_grav = $bp->grav_default->user;

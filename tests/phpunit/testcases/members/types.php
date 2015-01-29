@@ -20,6 +20,17 @@ class BP_Tests_Members_Types extends BP_UnitTestCase {
 		$this->assertInternalType( 'object', bp_register_member_type( 'foo' ) );
 	}
 
+	/**
+	 * @ticket BP6139
+	 */
+	public function test_bp_register_member_type_should_sanitize_member_type_key() {
+		$key = 'F//oo% -Bar';
+		$sanitized_key = 'foo-bar';
+
+		$object = bp_register_member_type( $key );
+		$this->assertSame( $sanitized_key, $object->name );
+	}
+
 	public function test_bp_register_member_type_should_store_member_type_string_as_name_property() {
 		$object = bp_register_member_type( 'foo' );
 		$this->assertSame( 'foo', $object->name );
@@ -30,6 +41,36 @@ class BP_Tests_Members_Types extends BP_UnitTestCase {
 		foreach ( $object->labels as $label ) {
 			$this->assertSame( 'Foo', $label );
 		}
+	}
+
+	/**
+	 * @ticket BP6125
+	 */
+	public function test_bp_register_member_type_should_respect_custom_name_label() {
+		$object = bp_register_member_type( 'foo', array(
+			'labels' => array(
+				'name' => 'Bar',
+			),
+		) );
+
+		// 'singular_name' falls back on 'name'.
+		$this->assertSame( 'Bar', $object->labels['name'] );
+		$this->assertSame( 'Bar', $object->labels['singular_name'] );
+	}
+
+	/**
+	 * @ticket BP6125
+	 */
+	public function test_bp_register_member_type_should_respect_custom_singular_name_label() {
+		$object = bp_register_member_type( 'foo', array(
+			'labels' => array(
+				'singular_name' => 'Bar',
+			),
+		) );
+
+		// 'name' is set to upper-case version of member type name.
+		$this->assertSame( 'Foo', $object->labels['name'] );
+		$this->assertSame( 'Bar', $object->labels['singular_name'] );
 	}
 
 	public function test_bp_get_member_type_object_should_return_null_for_non_existent_member_type() {

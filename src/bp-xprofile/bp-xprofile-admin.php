@@ -8,7 +8,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Creates the administration interface menus and checks to see if the DB
@@ -43,22 +43,22 @@ function xprofile_admin( $message = '', $type = 'error' ) {
 	if ( isset( $_GET['mode'] ) && isset( $_GET['group_id'] ) && 'add_field' == $_GET['mode'] )
 		xprofile_admin_manage_field( $_GET['group_id'] );
 
-	else if ( isset( $_GET['mode'] ) && isset( $_GET['group_id'] ) && isset( $_GET['field_id'] ) && 'edit_field' == $_GET['mode'] )
+	elseif ( isset( $_GET['mode'] ) && isset( $_GET['group_id'] ) && isset( $_GET['field_id'] ) && 'edit_field' == $_GET['mode'] )
 		xprofile_admin_manage_field( $_GET['group_id'], $_GET['field_id'] );
 
-	else if ( isset( $_GET['mode'] ) && isset( $_GET['field_id'] ) && 'delete_field' == $_GET['mode'] )
+	elseif ( isset( $_GET['mode'] ) && isset( $_GET['field_id'] ) && 'delete_field' == $_GET['mode'] )
 		xprofile_admin_delete_field( $_GET['field_id'], 'field');
 
-	else if ( isset( $_GET['mode'] ) && isset( $_GET['option_id'] ) && 'delete_option' == $_GET['mode'] )
+	elseif ( isset( $_GET['mode'] ) && isset( $_GET['option_id'] ) && 'delete_option' == $_GET['mode'] )
 		xprofile_admin_delete_field( $_GET['option_id'], 'option' );
 
-	else if ( isset( $_GET['mode'] ) && 'add_group' == $_GET['mode'] )
+	elseif ( isset( $_GET['mode'] ) && 'add_group' == $_GET['mode'] )
 		xprofile_admin_manage_group();
 
-	else if ( isset( $_GET['mode'] ) && isset( $_GET['group_id'] ) && 'delete_group' == $_GET['mode'] )
+	elseif ( isset( $_GET['mode'] ) && isset( $_GET['group_id'] ) && 'delete_group' == $_GET['mode'] )
 		xprofile_admin_delete_group( $_GET['group_id'] );
 
-	else if ( isset( $_GET['mode'] ) && isset( $_GET['group_id'] ) && 'edit_group' == $_GET['mode'] )
+	elseif ( isset( $_GET['mode'] ) && isset( $_GET['group_id'] ) && 'edit_group' == $_GET['mode'] )
 		xprofile_admin_manage_group( $_GET['group_id'] );
 
 	else { ?>

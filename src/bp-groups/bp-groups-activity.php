@@ -11,7 +11,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Register activity actions for the Groups component.
@@ -165,15 +165,15 @@ function bp_groups_format_activity_action_group_details_updated( $action, $activ
 		$action = sprintf( __( '%1$s updated details for the group %2$s', 'buddypress' ), $user_link, $group_link );
 
 	// Name and description changed - to keep things short, don't describe changes in detail.
-	} else if ( isset( $changed['name'] ) && isset( $changed['description'] ) ) {
+	} elseif ( isset( $changed['name'] ) && isset( $changed['description'] ) ) {
 		$action = sprintf( __( '%1$s changed the name and description of the group %2$s', 'buddypress' ), $user_link, $group_link );
 
 	// Name only.
-	} else if ( ! empty( $changed['name']['old'] ) && ! empty( $changed['name']['new'] ) ) {
+	} elseif ( ! empty( $changed['name']['old'] ) && ! empty( $changed['name']['new'] ) ) {
 		$action = sprintf( __( '%1$s changed the name of the group %2$s from "%3$s" to "%4$s"', 'buddypress' ), $user_link, $group_link, esc_html( $changed['name']['old'] ), esc_html( $changed['name']['new'] ) );
 
 	// Description only.
-	} else if ( ! empty( $changed['description']['old'] ) && ! empty( $changed['description']['new'] ) ) {
+	} elseif ( ! empty( $changed['description']['old'] ) && ! empty( $changed['description']['new'] ) ) {
 		$action = sprintf( __( '%1$s changed the description of the group %2$s from "%3$s" to "%4$s"', 'buddypress' ), $user_link, $group_link, esc_html( $changed['description']['old'] ), esc_html( $changed['description']['new'] ) );
 
 	}
@@ -242,28 +242,54 @@ add_filter( 'bp_activity_prefetch_object_data', 'bp_groups_prefetch_activity_obj
  * @param array $filter Current activity arguments
  * @return array
  */
-function bp_groups_filter_activity_scope( $retval, $filter ) {
-	$groups = groups_get_user_groups( $filter['user_id'] );
+function bp_groups_filter_activity_scope( $retval = array(), $filter = array() ) {
 
-	if ( empty( $groups['groups'] ) ) {
-		return $retval;
+	// Determine the user_id
+	if ( ! empty( $filter['user_id'] ) ) {
+		$user_id = $filter['user_id'];
+	} else {
+		$user_id = bp_displayed_user_id()
+			? bp_displayed_user_id()
+			: bp_loggedin_user_id();
 	}
 
-	$retval= array(
+	// Determine groups of user
+	$groups = groups_get_user_groups( $user_id );
+	if ( empty( $groups['groups'] ) ) {
+		$groups = array( 'groups' => 0 );
+	}
+
+	// Should we show all items regardless of sitewide visibility?
+	$show_hidden = array();
+	if ( ! empty( $user_id ) && ( $user_id !== bp_loggedin_user_id() ) ) {
+		$show_hidden = array(
+			'column' => 'hide_sitewide',
+			'value'  => 0
+		);
+	}
+
+	$retval = array(
 		'relation' => 'AND',
 		array(
-			'column' => 'component',
-			'value'  => buddypress()->groups->id
+			'relation' => 'AND',
+			array(
+				'column' => 'component',
+				'value'  => buddypress()->groups->id
+			),
+			array(
+				'column'  => 'item_id',
+				'compare' => 'IN',
+				'value'   => (array) $groups['groups']
+			),
 		),
-		array(
-			'column'  => 'item_id',
-			'compare' => 'IN',
-			'value'   => (array) $groups['groups']
+		$show_hidden,
+
+		// overrides
+		'override' => array(
+			'filter'      => array( 'user_id' => 0 ),
+			'show_hidden' => true
 		),
 	);
-
-	// wipe out the user ID
-	$retval['override']['filter']['user_id'] = 0;
 
 	return $retval;
 }
@@ -385,7 +411,7 @@ add_action( 'groups_membership_accepted', 'bp_groups_membership_accepted_add_act
  * @since BuddyPress (2.2.0)
  *
  * @param  int             $group_id       ID of the group.
- * @param  BP_Groups_Group $old_grop       Group object before the details had been changed.
+ * @param  BP_Groups_Group $old_group      Group object before the details had been changed.
  * @param  bool            $notify_members True if the admin has opted to notify group members, otherwise false.
  * @return int|bool The ID of the activity on success. False on error.
  */

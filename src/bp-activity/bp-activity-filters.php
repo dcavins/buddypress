@@ -8,7 +8,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /** Filters *******************************************************************/
 
@@ -528,8 +528,6 @@ add_filter( 'bp_get_activity_css_class', 'bp_activity_timestamp_class', 9, 1 );
  * @return array $response
  */
 function bp_activity_heartbeat_last_recorded( $response = array(), $data = array() ) {
-	$bp = buddypress();
-
 	if ( empty( $data['bp_activity_last_recorded'] ) ) {
 		return $response;
 	}
@@ -549,7 +547,7 @@ function bp_activity_heartbeat_last_recorded( $response = array(), $data = array
 	$newest_activities = array();
 	$last_activity_recorded = 0;
 
-	// Temporarly add a just-posted class for new activity items
+	// Temporarily add a just-posted class for new activity items
 	add_filter( 'bp_get_activity_css_class', 'bp_activity_newest_class', 10, 1 );
 
 	ob_start();
@@ -640,3 +638,172 @@ function bp_activity_heartbeat_strings( $strings = array() ) {
 	return $strings;
 }
 add_filter( 'bp_core_get_js_strings', 'bp_activity_heartbeat_strings', 10, 1 );
+
+/** Scopes ********************************************************************/
+
+/**
+ * Set up activity arguments for use with the 'just-me' scope.
+ *
+ * @since BuddyPress (2.2.0)
+ *
+ * @param array $retval Empty array by default
+ * @param array $filter Current activity arguments
+ * @return array
+ */
+function bp_activity_filter_just_me_scope( $retval = array(), $filter = array() ) {
+
+	// Determine the user_id
+	if ( ! empty( $filter['user_id'] ) ) {
+		$user_id = $filter['user_id'];
+	} else {
+		$user_id = bp_displayed_user_id()
+			? bp_displayed_user_id()
+			: bp_loggedin_user_id();
+	}
+
+	// Should we show all items regardless of sitewide visibility?
+	$show_hidden = array();
+	if ( ! empty( $user_id ) && $user_id !== bp_loggedin_user_id() ) {
+		$show_hidden = array(
+			'column' => 'hide_sitewide',
+			'value'  => 0
+		);
+	}
+
+	$retval = array(
+		'relation' => 'AND',
+		array(
+			'column' => 'user_id',
+			'value'  => $filter['user_id']
+		),
+		$show_hidden,
+
+		// overrides
+		'override' => array(
+			'display_comments' => 'stream',
+			'filter'           => array( 'user_id' => 0 ),
+			'show_hidden'      => true
+		),
+	);
+
+	return $retval;
+}
+add_filter( 'bp_activity_set_just-me_scope_args', 'bp_activity_filter_just_me_scope', 10, 2 );
+
+/**
+ * Set up activity arguments for use with the 'favorites' scope.
+ *
+ * @since BuddyPress (2.2.0)
+ *
+ * @param array $retval Empty array by default
+ * @param array $filter Current activity arguments
+ * @return array
+ */
+function bp_activity_filter_favorites_scope( $retval = array(), $filter = array() ) {
+
+	// Determine the user_id
+	if ( ! empty( $filter['user_id'] ) ) {
+		$user_id = $filter['user_id'];
+	} else {
+		$user_id = bp_displayed_user_id()
+			? bp_displayed_user_id()
+			: bp_loggedin_user_id();
+	}
+
+	// Determine the favorites
+	$favs = bp_activity_get_user_favorites( $user_id );
+	if ( empty( $favs ) ) {
+		$favs = array( 0 );
+	}
+
+	// Should we show all items regardless of sitewide visibility?
+	$show_hidden = array();
+	if ( ! empty( $user_id ) && ( $user_id !== bp_loggedin_user_id() ) ) {
+		$show_hidden = array(
+			'column' => 'hide_sitewide',
+			'value'  => 0
+		);
+	}
+
+	$retval = array(
+		'relation' => 'AND',
+		array(
+			'column'  => 'id',
+			'compare' => 'IN',
+			'value'   => (array) $favs
+		),
+		$show_hidden,
+
+		// overrides
+		'override' => array(
+			'display_comments' => true,
+			'filter'           => array( 'user_id' => 0 ),
+			'show_hidden'      => true
+		),
+	);
+
+	return $retval;
+}
+add_filter( 'bp_activity_set_favorites_scope_args', 'bp_activity_filter_favorites_scope', 10, 2 );
+
+
+/**
+ * Set up activity arguments for use with the 'favorites' scope.
+ *
+ * @since BuddyPress (2.2.0)
+ *
+ * @param array $retval Empty array by default
+ * @param array $filter Current activity arguments
+ * @return array
+ */
+function bp_activity_filter_mentions_scope( $retval = array(), $filter = array() ) {
+
+	// Are mentions disabled?
+	if ( ! bp_activity_do_mentions() ) {
+		return $retval;
+	}
+
+	// Determine the user_id
+	if ( ! empty( $filter['user_id'] ) ) {
+		$user_id = $filter['user_id'];
+	} else {
+		$user_id = bp_displayed_user_id()
+			? bp_displayed_user_id()
+			: bp_loggedin_user_id();
+	}
+
+	// Should we show all items regardless of sitewide visibility?
+	$show_hidden = array();
+	if ( ! empty( $user_id ) && $user_id !== bp_loggedin_user_id() ) {
+		$show_hidden = array(
+			'column' => 'hide_sitewide',
+			'value'  => 0
+		);
+	}
+
+	$retval = array(
+		'relation' => 'AND',
+		array(
+			'column'  => 'content',
+			'compare' => 'LIKE',
+
+			// Start search at @ symbol and stop search at closing tag delimiter.
+			'value'   => '@' . bp_activity_get_user_mentionname( $user_id ) . '<'
+		),
+		$show_hidden,
+
+		// overrides
+		'override' => array(
+
+			// clear search terms so 'mentions' scope works with other scopes
+			'search_terms' => false,
+
+			'display_comments' => 'stream',
+			'filter'           => array( 'user_id' => 0 ),
+			'show_hidden'      => true
+		),
+	);
+
+	return $retval;
+}
+add_filter( 'bp_activity_set_mentions_scope_args', 'bp_activity_filter_mentions_scope', 10, 2 );

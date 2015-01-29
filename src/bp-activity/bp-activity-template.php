@@ -8,7 +8,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Output the activity component slug.
@@ -87,7 +87,7 @@ function bp_activity_directory_permalink() {
 	 *
 	 * @since BuddyPress (1.5.0)
 	 *
-	 * @uses traisingslashit()
+	 * @uses trailingslashit()
 	 * @uses bp_get_root_domain()
 	 * @uses bp_get_activity_root_slug()
 	 * @uses apply_filters() To call the 'bp_get_activity_directory_permalink' hook.
@@ -214,9 +214,9 @@ class BP_Activity_Template {
 		$r = wp_parse_args( $args, $defaults );
 		extract( $r );
 
-		$this->pag_arg  = $r['page_arg'];
-		$this->pag_page = isset( $_REQUEST[ $this->pag_arg ] ) ? intval( $_REQUEST[ $this->pag_arg ] ) : $page;
-		$this->pag_num  = isset( $_REQUEST['num'] ) ? intval( $_REQUEST['num'] ) : $per_page;
+		$this->pag_arg  = sanitize_key( $r['page_arg'] );
+		$this->pag_page = bp_sanitize_pagination_arg( $this->pag_arg, $r['page']     );
+		$this->pag_num  = bp_sanitize_pagination_arg( 'num',          $r['per_page'] );
 
 		// Check if blog/forum replies are disabled
 		$this->disable_blogforum_replies = isset( $bp->site_options['bp-disable-blogforum-comments'] ) ? $bp->site_options['bp-disable-blogforum-comments'] : false;
@@ -622,19 +622,6 @@ function bp_has_activities( $args = '' ) {
 	if ( empty( $search_terms ) && ! empty( $_REQUEST['s'] ) )
 		$search_terms = $_REQUEST['s'];
 
-	// Set some default arguments when using a scope
-	if ( ! empty( $scope ) ) {
-		// Determine which user ID applies
-		if ( empty( $user_id ) ) {
-			$user_id = bp_displayed_user_id() ? bp_displayed_user_id() : bp_loggedin_user_id();
-		}
-
-		// Should we show all items regardless of sitewide visibility?
-		if ( ! empty( $user_id ) ) {
-			$show_hidden = ( $user_id == bp_loggedin_user_id() ) ? 1 : 0;
-		}
-	}
-
 	// Do not exceed the maximum per page
 	if ( !empty( $max ) && ( (int) $per_page > (int) $max ) )
 		$per_page = $max;
@@ -652,7 +639,7 @@ function bp_has_activities( $args = '' ) {
 	 */
 	if ( isset( $_GET['afilter'] ) && apply_filters( 'bp_activity_enable_afilter_support', false ) )
 		$filter = array( 'object' => $_GET['afilter'] );
-	else if ( ! empty( $user_id ) || ! empty( $object ) || ! empty( $action ) || ! empty( $primary_id ) || ! empty( $secondary_id ) || ! empty( $offset ) || ! empty( $since ) )
+	elseif ( ! empty( $user_id ) || ! empty( $object ) || ! empty( $action ) || ! empty( $primary_id ) || ! empty( $secondary_id ) || ! empty( $offset ) || ! empty( $since ) )
 		$filter = array( 'user_id' => $user_id, 'object' => $object, 'action' => $action, 'primary_id' => $primary_id, 'secondary_id' => $secondary_id, 'offset' => $offset, 'since' => $since );
 	else
 		$filter = false;
@@ -1453,7 +1440,7 @@ function bp_activity_avatar( $args = '' ) {
 		 */
 		$item_id = apply_filters( 'bp_get_activity_avatar_item_id', $item_id );
 
-		// If this is a user object pass the users' email address for Gravatar so we don't have to refetch it.
+		// If this is a user object pass the users' email address for Gravatar so we don't have to prefetch it.
 		if ( 'user' == $object && empty( $user_id ) && empty( $email ) && isset( $current_activity_item->user_email ) )
 			$email = $current_activity_item->user_email;
 
@@ -1639,7 +1626,7 @@ function bp_activity_secondary_avatar( $args = '' ) {
 			 * @since BuddyPress (1.7.0)
 			 *
 			 * @param string $link Link to wrap the avatar image in.
-			 * @param string $component Activity componant being acted on.
+			 * @param string $component Activity component being acted on.
 			 */
 			$link = apply_filters( 'bp_get_activity_secondary_avatar_link', $link, $activities_template->activity->component );
 
@@ -1816,7 +1803,7 @@ function bp_activity_content() {
 		 * If you want to filter activity update content, please use
 		 * the filter 'bp_get_activity_content_body'
 		 *
-		 * This function is mainly for backwards comptibility.
+		 * This function is mainly for backwards compatibility.
 		 */
 		$content = bp_get_activity_action() . ' ' . bp_get_activity_content_body();
 		return apply_filters( 'bp_get_activity_content', $content );
@@ -4308,7 +4295,7 @@ function bp_activity_show_filters( $context = '' ) {
 				}
 
 			// On individual group pages, default to 'group'
-			} else if ( bp_is_active( 'groups' ) && bp_is_group() ) {
+			} elseif ( bp_is_active( 'groups' ) && bp_is_group() ) {
 				$context = 'group';
 
 			// 'activity' everywhere else

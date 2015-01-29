@@ -8,7 +8,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Output the blogs component slug.
@@ -199,8 +199,9 @@ class BP_Blogs_Template {
 	 */
 	public function __construct( $type, $page, $per_page, $max, $user_id, $search_terms, $page_arg = 'bpage', $update_meta_cache = true, $include_blog_ids = false ) {
 
-		$this->pag_page = isset( $_REQUEST[ $page_arg ] ) ? intval( $_REQUEST[ $page_arg ] ) : $page;
-		$this->pag_num  = isset( $_REQUEST['num']       ) ? intval( $_REQUEST['num']       ) : $per_page;
+		$this->pag_arg  = sanitize_key( $page_arg );
+		$this->pag_page = bp_sanitize_pagination_arg( $this->pag_arg, $page     );
+		$this->pag_num  = bp_sanitize_pagination_arg( 'num',          $per_page );
 
 		// Backwards compatibility support for blogs by first letter
 		if ( ! empty( $_REQUEST['letter'] ) ) {
@@ -242,7 +243,7 @@ class BP_Blogs_Template {
 		// Build pagination links based on total blogs and current page number
 		if ( ! empty( $this->total_blog_count ) && ! empty( $this->pag_num ) ) {
 			$this->pag_links = paginate_links( array(
-				'base'      => add_query_arg( $page_arg, '%#%' ),
+				'base'      => add_query_arg( $this->pag_arg, '%#%' ),
 				'format'    => '',
 				'total'     => ceil( (int) $this->total_blog_count / (int) $this->pag_num ),
 				'current'   => (int) $this->pag_page,
@@ -394,7 +395,7 @@ function bp_rewind_blogs() {
 function bp_has_blogs( $args = '' ) {
 	global $blogs_template;
 
-	// Checkfor and use search terms
+	// Check for and use search terms
 	$search_terms = ! empty( $_REQUEST['s'] )
 		? $_REQUEST['s']
 		: false;
@@ -770,7 +771,7 @@ function bp_blog_last_active( $args = array() ) {
 			'active_format' => true
 		) );
 
-		// Backwards compatibilty for anyone forcing a 'true' active_format
+		// Backwards compatibility for anyone forcing a 'true' active_format
 		if ( true === $r['active_format'] ) {
 			$r['active_format'] = __( 'active %s', 'buddypress' );
 		}
@@ -1223,7 +1224,7 @@ function bp_blogs_signup_blog( $blogname = '', $blog_title = '', $errors = '' ) 
 	if ( !is_subdomain_install() )
 		echo '<span class="prefix_address">' . $current_site->domain . $current_site->path . '</span> <input name="blogname" type="text" id="blogname" value="'.$blogname.'" maxlength="63" /><br />';
 	else
-		echo '<input name="blogname" type="text" id="blogname" value="'.$blogname.'" maxlength="63" /> <span class="suffix_address">.' . bp_blogs_get_subdomain_base() . '</span><br />';
+		echo '<input name="blogname" type="text" id="blogname" value="'.$blogname.'" maxlength="63" ' . bp_get_form_field_attributes( 'blogname' ) . '/> <span class="suffix_address">.' . bp_blogs_get_subdomain_base() . '</span><br />';
 
 	if ( !is_user_logged_in() ) {
 		print '(<strong>' . __( 'Your address will be ' , 'buddypress');
@@ -1365,7 +1366,7 @@ function bp_blogs_confirm_blog_signup( $domain, $path, $blog_title, $user_name, 
 <?php
 
 	/**
-	 * Fires after the default successful blog registration messsage markup.
+	 * Fires after the default successful blog registration message markup.
 	 *
 	 * @since BuddyPress (1.0.0)
 	 */
@@ -1471,6 +1472,7 @@ function bp_blog_create_button() {
 			'link_class' => 'blog-create no-ajax',
 			'link_href'  => trailingslashit( bp_get_root_domain() ) . trailingslashit( bp_get_blogs_root_slug() ) . trailingslashit( 'create' ),
 			'wrapper'    => false,
+			'block_self' => false,
 		);
 
 		/**

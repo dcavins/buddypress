@@ -8,7 +8,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * BuddyPress Group object.
@@ -1295,7 +1295,7 @@ class BP_Groups_Group {
 					$is_member = '1';
 
 				// invite_sent means the user has been invited
-				} else if ( $user_status[ $gid ]->invite_sent ) {
+				} elseif ( $user_status[ $gid ]->invite_sent ) {
 					$is_invited = '1';
 
 				// User has sent request, but has not been confirmed
@@ -1611,7 +1611,7 @@ class BP_Group_Member_Query extends BP_User_Query {
 				$sql['where'][] = "inviter_id = 0";
 
 			// The string 'any' matches any non-zero value (inviter_id != 0)
-			} else if ( 'any' === $inviter_id ) {
+			} elseif ( 'any' === $inviter_id ) {
 				$sql['where'][] = "inviter_id != 0";
 
 			// Assume that a list of inviter IDs has been passed
@@ -2773,24 +2773,26 @@ class BP_Groups_Member {
  * of arguments to parent::init() to configure your widget. The config array
  * supports the following values:
  *   - 'slug' A unique identifier for your extension. This value will be used
- *     to build URLs, so make it URL-safe
+ *     to build URLs, so make it URL-safe.
  *   - 'name' A translatable name for your extension. This value is used to
-       populate the navigation tab, as well as the default titles for admin/
-       edit/create tabs.
+ *     populate the navigation tab, as well as the default titles for admin/
+ *     edit/create tabs.
  *   - 'visibility' Set to 'public' (default) for your extension (the main tab
  *     as well as the widget) to be available to anyone who can access the
  *     group, 'private' otherwise.
  *   - 'nav_item_position' An integer explaining where the nav item should
- *     appear in the tab list
+ *     appear in the tab list.
  *   - 'enable_nav_item' Set to true for your extension's main tab to be
  *     available to anyone who can access the group.
  *   - 'nav_item_name' The translatable text you want to appear in the nav tab.
  *     Defaults to the value of 'name'.
  *   - 'display_hook' The WordPress action that the widget_display() method is
- *     hooked to
+ *     hooked to.
  *   - 'template_file' The template file that will be used to load the content
  *     of your main extension tab. Defaults to 'groups/single/plugins.php'.
- *   - 'screens' A multi-dimensional array, described below
+ *   - 'screens' A multi-dimensional array, described below.
+ * 	 - 'access' Which users can visit the plugin's tab.
+ * 	 - 'show_tab' Which users can see the plugin's navigation tab.
  *
  * BP_Group_Extension uses the concept of "settings screens". There are three
  * contexts for settings screens:
@@ -2873,7 +2875,7 @@ class BP_Group_Extension {
 	public $class_reflection = null;
 
 	/**
-	 * Parsed configuration paramaters for the extension.
+	 * Parsed configuration parameters for the extension.
 	 *
 	 * @since BuddyPress (1.8.0)
 	 * @access public
@@ -3081,7 +3083,9 @@ class BP_Group_Extension {
 	 *       parent::init( $args );
 	 *   }
 	 *
-	 * @since BuddyPress (1.8)
+	 * @since BuddyPress (1.8.0)
+	 * @since BuddyPress (2.1.0) Added 'access' and 'show_tab' arguments
+	 * 		  to $args.
 	 * @param array $args {
 	 *     Array of initialization arguments.
 	 *     @type string $slug Unique, URL-safe identifier for your
@@ -3108,6 +3112,19 @@ class BP_Group_Extension {
 	 *     @type array $screens A multi-dimensional array of configuration
 	 *           information for the extension screens. See docblock of
 	 *           {@link BP_Group_Extension} for more details.
+	 *     @type string $access Which users can visit the plugin's tab.
+	 *			 Possible values: 'anyone', 'loggedin', 'member',
+	 *        	 'mod', 'admin' or 'noone'
+	 *			 ('member', 'mod', 'admin' refer to user's role in group.)
+	 * 			 Defaults to 'anyone' for public groups and 'member' for
+	 *			 private groups.
+	 *     @type string $show_tab Which users can see the plugin's navigation
+	 *			 tab.
+	 *			 Possible values: 'anyone', 'loggedin', 'member',
+	 *        	 'mod', 'admin' or 'noone'
+	 *			 ('member', 'mod', 'admin' refer to user's role in group.)
+	 * 			 Defaults to 'anyone' for public groups and 'member' for
+	 *			 private groups.
 	 * }
 	 */
 	public function init( $args = array() ) {
@@ -3309,7 +3326,7 @@ class BP_Group_Extension {
 	 * @since BuddyPress (2.1.0)
 	 */
 	protected function setup_access_settings() {
-		// Bail if no gruop ID is available
+		// Bail if no group ID is available
 		if ( empty( $this->group_id ) ) {
 			return;
 		}
@@ -3369,7 +3386,7 @@ class BP_Group_Extension {
 				// constructor. So we always trust this value
 				$this->params['show_tab'] = 'noone';
 
-			} else if ( isset( $this->params_raw['enable_nav_item'] ) || isset( $this->params_raw['visibility'] ) ) {
+			} elseif ( isset( $this->params_raw['enable_nav_item'] ) || isset( $this->params_raw['visibility'] ) ) {
 				// If enable_nav_item or visibility is passed,
 				// we assume this  is a legacy extension.
 				// Legacy behavior is that enable_nav_item=true +

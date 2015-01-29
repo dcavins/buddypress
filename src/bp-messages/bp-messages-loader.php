@@ -10,7 +10,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Implementation of BP_Component for the Messages component.
@@ -291,6 +291,23 @@ class BP_Messages_Component extends BP_Component {
 		}
 
 		parent::setup_title();
+	}
+
+	/**
+	 * Setup cache groups
+	 *
+	 * @since BuddyPress (2.2.0)
+	 */
+	public function setup_cache_groups() {
+
+		// Global groups
+		wp_cache_add_global_groups( array(
+			'bp_messages',
+			'bp_messages_unread_count',
+			'message_meta'
+		) );
+
+		parent::setup_cache_groups();
 	}
 }
 

@@ -8,7 +8,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /** Versions ******************************************************************/
 
@@ -112,7 +112,7 @@ function bp_sort_by_key( $items, $key, $type = 'alpha' ) {
 		foreach ( $func_args as $indexi => $index ) {
 			if ( isset( $index->' . $key . ' ) ) {
 				$values[ $indexi ] = $index->' . $key . ';
-			} else if ( isset( $index["' . $key . '"] ) ) {
+			} elseif ( isset( $index["' . $key . '"] ) ) {
 				$values[ $indexi ] = $index["' . $key . '"];
 			}
 		}
@@ -126,7 +126,7 @@ function bp_sort_by_key( $items, $key, $type = 'alpha' ) {
 
 			if ( 0 > $cmp ) {
 				$retval = -1;
-			} else if ( 0 < $cmp ) {
+			} elseif ( 0 < $cmp ) {
 				$retval = 1;
 			} else {
 				$retval = 0;
@@ -268,6 +268,35 @@ function bp_parse_args( $args, $defaults = array(), $filter_key = '' ) {
 }
 
 /**
+ * Sanitizes a pagination argument based on both the request override and the
+ * original value submitted via a query argument, likely to a template class
+ * responsible for limiting the resultset of a template loop.
+ *
+ * @since BuddyPress (2.2.0)
+ *
+ * @param  string $page_arg The $_REQUEST argument to look for
+ * @param  int    $page     The original page value to fall back to
+ * @return int              A sanitized integer value, good for pagination
+ */
+function bp_sanitize_pagination_arg( $page_arg = '', $page = 1 ) {
+
+	// Check if request overrides exist
+	if ( isset( $_REQUEST[ $page_arg ] ) ) {
+
+		// Get the absolute integer value of the override
+		$int = absint( $_REQUEST[ $page_arg ] );
+
+		// If override is 0, do not use it. This prevents unlimited result sets.
+		// @see https://buddypress.trac.wordpress.org/ticket/5796
+		if ( $int ) {
+			$page = intval( $int );
+		}
+	}
+
+	return $page;
+}
+
+/**
  * Sanitize an 'order' parameter for use in building SQL queries.
  *
  * Strings like 'DESC', 'desc', ' desc' will be interpreted into 'DESC'.
@@ -341,7 +370,7 @@ function bp_use_wp_admin_bar() {
 	// Default to true (to avoid loading deprecated BuddyBar code)
 	$use_admin_bar = true;
 
-	// Has the WP Toolbar constant been explicity opted into?
+	// Has the WP Toolbar constant been explicitly opted into?
 	if ( defined( 'BP_USE_WP_ADMIN_BAR' ) ) {
 		$use_admin_bar = (bool) BP_USE_WP_ADMIN_BAR;
 
@@ -1327,7 +1356,7 @@ function bp_use_embed_in_activity() {
 }
 
 /**
- * Are oembeds allwoed in activity replies?
+ * Are oembeds allowed in activity replies?
  *
  * @since BuddyPress (1.5.0)
  *
@@ -1912,7 +1941,6 @@ function bp_nav_menu_get_loggedin_pages() {
 	$page_args = array();
 
 	foreach ( $bp_menu_items as $bp_item ) {
-		$item_name = '';
 
 		// Remove <span>number</span>
 		$item_name = preg_replace( '/([.0-9]+)/', '', $bp_item['name'] );

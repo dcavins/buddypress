@@ -183,7 +183,7 @@ class BP_Tests_Members_Functions extends BP_UnitTestCase {
 		global $wpdb, $bp;
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$bp->profile->table_name_data} WHERE user_id = %d AND field_id = 1", $u ) );
 		wp_cache_delete( 'bp_user_fullname_' . $u, 'bp' );
-		wp_cache_delete( 1, 'bp_xprofile_data_' . $u, 'bp' );
+		wp_cache_delete( "{$u}:1", 'bp_xprofile_data', 'bp' );
 
 		$this->assertSame( '', xprofile_get_field_data( 1, $u ) );
 		$this->assertSame( 'Foo Foo', bp_core_get_user_displayname( $u ) );
@@ -445,6 +445,90 @@ class BP_Tests_Members_Functions extends BP_UnitTestCase {
 	public function filter_usermeta_key( $key ) {
 		global $wpdb;
 		return $wpdb->prefix . $key;
+	}
+
+	/**
+	 * @group bp_core_process_spammer_status
+	 */
+	public function test_bp_core_process_spammer_status() {
+		if ( is_multisite() ) {
+			return;
+		}
+
+		$bp = buddypress();
+		$displayed_user = $bp->displayed_user;
+
+		$u1 = $this->factory->user->create();
+		$bp->displayed_user->id = $u1;
+
+		// Spam the user
+		bp_core_process_spammer_status( $u1, 'spam' );
+
+		$this->assertTrue( bp_is_user_spammer( $u1 ) );
+
+		// Unspam the user
+		bp_core_process_spammer_status( $u1, 'ham' );
+
+		$this->assertFalse( bp_is_user_spammer( $u1 ) );
+
+		// Reset displayed user
+		$bp->displayed_user = $displayed_user;
+	}
+
+	/**
+	 * @group bp_core_process_spammer_status
+	 */
+	public function test_bp_core_process_spammer_status_ms_bulk_spam() {
+		if ( ! is_multisite() ) {
+			return;
+		}
+
+		$bp = buddypress();
+		$displayed_user = $bp->displayed_user;
+
+		$u1 = $this->factory->user->create();
+		$bp->displayed_user->id = $u1;
+
+		// Bulk spam in network admin uses update_user_status
+		update_user_status( $u1, 'spam', '1' );
+
+		$this->assertTrue( bp_is_user_spammer( $u1 ) );
+
+		// Unspam the user
+		bp_core_process_spammer_status( $u1, 'ham' );
+
+		$this->assertFalse( bp_is_user_spammer( $u1 ) );
+
+		// Reset displayed user
+		$bp->displayed_user = $displayed_user;
+	}
+
+	/**
+	 * @group bp_core_process_spammer_status
+	 */
+	public function test_bp_core_process_spammer_status_ms_bulk_ham() {
+		if ( ! is_multisite() ) {
+			return;
+		}
+
+		$bp = buddypress();
+		$displayed_user = $bp->displayed_user;
+
+		$u1 = $this->factory->user->create();
+		$bp->displayed_user->id = $u1;
+
+		// Spam the user
+		bp_core_process_spammer_status( $u1, 'spam' );
+
+		$this->assertTrue( bp_is_user_spammer( $u1 ) );
+
+		// Bulk unspam in network admin uses update_user_status
+		update_user_status( $u1, 'spam', '0' );
+
+		$this->assertFalse( bp_is_user_spammer( $u1 ) );
+
+		// Reset displayed user
+		$bp->displayed_user = $displayed_user;
 	}
 
 	/**

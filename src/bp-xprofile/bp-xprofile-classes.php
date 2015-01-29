@@ -8,7 +8,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 class BP_XProfile_Group {
 	public $id = null;
@@ -191,7 +191,7 @@ class BP_XProfile_Group {
 
 		if ( ! empty( $profile_group_id ) ) {
 			$where_sql = $wpdb->prepare( 'WHERE g.id = %d', $profile_group_id );
-		} else if ( $exclude_groups ) {
+		} elseif ( $exclude_groups ) {
 			$exclude_groups = join( ',', wp_parse_id_list( $exclude_groups ) );
 			$where_sql = "WHERE g.id NOT IN ({$exclude_groups})";
 		}
@@ -292,7 +292,7 @@ class BP_XProfile_Group {
 				// Loop through fields
 				foreach( (array) $fields as $field_key => $field ) {
 
-					// Loop throught the data in each field
+					// Loop through the data in each field
 					foreach( (array) $field_data as $data ) {
 
 						// Assign correct data value to the field
@@ -492,7 +492,7 @@ class BP_XProfile_Group {
 			foreach ( $levels as $level ) {
 				if ( 'default_visibility' == $level->meta_key ) {
 					$default_visibility_levels[ $level->object_id ]['default'] = $level->meta_value;
-				} else if ( 'allow_custom_visibility' == $level->meta_key ) {
+				} elseif ( 'allow_custom_visibility' == $level->meta_key ) {
 					$default_visibility_levels[ $level->object_id ]['allow_custom'] = $level->meta_value;
 				}
 			}
@@ -937,7 +937,7 @@ class BP_XProfile_Field {
 		if ( empty( $bp->profile->table_name_fields ) || !isset( $field_name ) )
 			return false;
 
-		return $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$bp->profile->table_name_fields} WHERE name = %s", $field_name ) );
+		return $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$bp->profile->table_name_fields} WHERE name = %s AND parent_id = 0", $field_name ) );
 	}
 
 	public static function update_position( $field_id, $position, $field_group_id ) {
@@ -1222,15 +1222,15 @@ class BP_XProfile_ProfileData {
 	public function populate( $field_id, $user_id )  {
 		global $wpdb, $bp;
 
-		$cache_group = 'bp_xprofile_data_' . $user_id;
-		$profiledata = wp_cache_get( $field_id, $cache_group );
+		$cache_key   = "{$user_id}:{$field_id}";
+		$profiledata = wp_cache_get( $cache_key, 'bp_xprofile_data' );
 
 		if ( false === $profiledata ) {
-			$sql = $wpdb->prepare( "SELECT * FROM {$bp->profile->table_name_data} WHERE field_id = %d AND user_id = %d", $field_id, $user_id );
+			$sql         = $wpdb->prepare( "SELECT * FROM {$bp->profile->table_name_data} WHERE field_id = %d AND user_id = %d", $field_id, $user_id );
 			$profiledata = $wpdb->get_row( $sql );
 
 			if ( $profiledata ) {
-				wp_cache_set( $field_id, $profiledata, $cache_group );
+				wp_cache_set( $cache_key, $profiledata, 'bp_xprofile_data' );
 			}
 		}
 
@@ -1259,7 +1259,8 @@ class BP_XProfile_ProfileData {
 		global $wpdb, $bp;
 
 		// Check cache first
-		$cached = wp_cache_get( $this->field_id, 'bp_xprofile_data_' . $this->user_id );
+		$cache_key = "{$this->user_id}:{$this->field_id}";
+		$cached    = wp_cache_get( $cache_key, 'bp_xprofile_data' );
 
 		if ( $cached && ! empty( $cached->id ) ) {
 			$retval = true;
@@ -1324,7 +1325,7 @@ class BP_XProfile_ProfileData {
 			if ( $this->exists() && strlen( trim( $this->value ) ) ) {
 				$result   = $wpdb->query( $wpdb->prepare( "UPDATE {$bp->profile->table_name_data} SET value = %s, last_updated = %s WHERE user_id = %d AND field_id = %d", $this->value, $this->last_updated, $this->user_id, $this->field_id ) );
 
-			} else if ( $this->exists() && empty( $this->value ) ) {
+			} elseif ( $this->exists() && empty( $this->value ) ) {
 				// Data removed, delete the entry.
 				$result   = $this->delete();
 
@@ -1400,9 +1401,7 @@ class BP_XProfile_ProfileData {
 
 		$data = array();
 
-		$cache_group = 'bp_xprofile_data_' . $user_id;
-
-		$uncached_field_ids = bp_get_non_cached_ids( $field_ids, $cache_group );
+		$uncached_field_ids = bp_xprofile_get_non_cached_field_ids( $user_id, $field_ids, 'bp_xprofile_data' );
 
 		// Prime the cache
 		if ( ! empty( $uncached_field_ids ) ) {
@@ -1426,9 +1425,11 @@ class BP_XProfile_ProfileData {
 			// Set caches
 			foreach ( $uncached_field_ids as $field_id ) {
 
+				$cache_key = "{$user_id}:{$field_id}";
+
 				// If a value was found, cache it
 				if ( isset( $queried_data[ $field_id ] ) ) {
-					wp_cache_set( $field_id, $queried_data[ $field_id ], $cache_group );
+					wp_cache_set( $cache_key, $queried_data[ $field_id ], 'bp_xprofile_data' );
 
 				// If no value was found, cache an empty item
 				// to avoid future cache misses
@@ -1440,14 +1441,15 @@ class BP_XProfile_ProfileData {
 					$d->value        = '';
 					$d->last_updated = '';
 
-					wp_cache_set( $field_id, $d, $cache_group );
+					wp_cache_set( $cache_key, $d, 'bp_xprofile_data' );
 				}
 			}
 		}
 
 		// Now that all items are cached, fetch them
 		foreach ( $field_ids as $field_id ) {
-			$data[] = wp_cache_get( $field_id, $cache_group );
+			$cache_key = "{$user_id}:{$field_id}";
+			$data[]    = wp_cache_get( $cache_key, 'bp_xprofile_data' );
 		}
 
 		return $data;
@@ -1460,7 +1462,6 @@ class BP_XProfile_ProfileData {
 	 * @return array
 	 */
 	public static function get_all_for_user( $user_id ) {
-		global $wpdb, $bp;
 
 		$groups = bp_xprofile_get_groups( array(
 			'user_id'                => $user_id,
@@ -1514,7 +1515,8 @@ class BP_XProfile_ProfileData {
 		} else {
 
 			// Check cache first
-			$fielddata = wp_cache_get( $field_id, 'bp_xprofile_data_' . $user_id );
+			$cache_key = "{$user_id}:{$field_id}";
+			$fielddata = wp_cache_get( $cache_key, 'bp_xprofile_data' );
 			if ( false === $fielddata || empty( $fielddata->id ) ) {
 				$fielddata_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$bp->profile->table_name_data} WHERE field_id = %d AND user_id = %d", $field_id, $user_id ) );
 			} else {
@@ -1551,7 +1553,8 @@ class BP_XProfile_ProfileData {
 		// Assemble uncached IDs
 		$uncached_ids = array();
 		foreach ( $user_ids as $user_id ) {
-			if ( false === wp_cache_get( $field_id, 'bp_xprofile_data_' . $user_id ) ) {
+			$cache_key = "{$user_id}:{$field_id}";
+			if ( false === wp_cache_get( $cache_key, 'bp_xprofile_data' ) ) {
 				$uncached_ids[] = $user_id;
 			}
 		}
@@ -1583,14 +1586,16 @@ class BP_XProfile_ProfileData {
 					$d->last_updated = '';
 				}
 
-				wp_cache_set( $field_id, $d, 'bp_xprofile_data_' . $d->user_id );
+				$cache_key = "{$d->user_id}:{$field_id}";
+				wp_cache_set( $cache_key, $d, 'bp_xprofile_data' );
 			}
 		}
 
 		// Now that the cache is primed with all data, fetch it
 		$data = array();
 		foreach ( $user_ids as $user_id ) {
-			$data[] = wp_cache_get( $field_id, 'bp_xprofile_data_' . $user_id );
+			$cache_key = "{$user_id}:{$field_id}";
+			$data[]    = wp_cache_get( $cache_key, 'bp_xprofile_data' );
 		}
 
 		// If a single ID was passed, just return the value
@@ -1640,7 +1645,7 @@ class BP_XProfile_ProfileData {
 				for ( $j = 0; $j < count( $fields ); $j++ ) {
 					if ( $values[$i]->name == $fields[$j] ) {
 						$new_values[$fields[$j]] = $values[$i]->value;
-					} else if ( !array_key_exists( $fields[$j], $new_values ) ) {
+					} elseif ( !array_key_exists( $fields[$j], $new_values ) ) {
 						$new_values[$fields[$j]] = NULL;
 					}
 				}
@@ -1807,7 +1812,7 @@ class BP_XProfile_Field_Type_Datebox extends BP_XProfile_Field_Type {
 	 * Output the edit field options HTML for this field type.
 	 *
 	 * BuddyPress considers a field's "options" to be, for example, the items in a selectbox.
-	 * These are stored separately in the database, and their templating is handled seperately.
+	 * These are stored separately in the database, and their templating is handled separately.
 	 *
 	 * This templating is separate from {@link BP_XProfile_Field_Type::edit_field_html()} because
 	 * it's also used in the wp-admin screens when creating new fields, and for backwards compatibility.
@@ -2073,7 +2078,7 @@ class BP_XProfile_Field_Type_Checkbox extends BP_XProfile_Field_Type {
 	 * Output the edit field options HTML for this field type.
 	 *
 	 * BuddyPress considers a field's "options" to be, for example, the items in a selectbox.
-	 * These are stored separately in the database, and their templating is handled seperately.
+	 * These are stored separately in the database, and their templating is handled separately.
 	 *
 	 * This templating is separate from {@link BP_XProfile_Field_Type::edit_field_html()} because
 	 * it's also used in the wp-admin screens when creating new fields, and for backwards compatibility.
@@ -2256,7 +2261,7 @@ class BP_XProfile_Field_Type_Radiobutton extends BP_XProfile_Field_Type {
 	 * Output the edit field options HTML for this field type.
 	 *
 	 * BuddyPress considers a field's "options" to be, for example, the items in a selectbox.
-	 * These are stored separately in the database, and their templating is handled seperately.
+	 * These are stored separately in the database, and their templating is handled separately.
 	 *
 	 * This templating is separate from {@link BP_XProfile_Field_Type::edit_field_html()} because
 	 * it's also used in the wp-admin screens when creating new fields, and for backwards compatibility.
@@ -2439,7 +2444,7 @@ class BP_XProfile_Field_Type_Multiselectbox extends BP_XProfile_Field_Type {
 	 * Output the edit field options HTML for this field type.
 	 *
 	 * BuddyPress considers a field's "options" to be, for example, the items in a selectbox.
-	 * These are stored separately in the database, and their templating is handled seperately.
+	 * These are stored separately in the database, and their templating is handled separately.
 	 *
 	 * This templating is separate from {@link BP_XProfile_Field_Type::edit_field_html()} because
 	 * it's also used in the wp-admin screens when creating new fields, and for backwards compatibility.
@@ -2613,7 +2618,7 @@ class BP_XProfile_Field_Type_Selectbox extends BP_XProfile_Field_Type {
 	 * Output the edit field options HTML for this field type.
 	 *
 	 * BuddyPress considers a field's "options" to be, for example, the items in a selectbox.
-	 * These are stored separately in the database, and their templating is handled seperately.
+	 * These are stored separately in the database, and their templating is handled separately.
 	 *
 	 * This templating is separate from {@link BP_XProfile_Field_Type::edit_field_html()} because
 	 * it's also used in the wp-admin screens when creating new fields, and for backwards compatibility.
@@ -3624,13 +3629,9 @@ abstract class BP_XProfile_Field_Type {
 		 * @param array  $r     Array of parsed arguments.
 		 * @param string $value Class name for the current class instance.
 		 */
-		$r    = (array) apply_filters( 'bp_xprofile_field_edit_html_elements', $r, get_class( $this ) );
+		$r = (array) apply_filters( 'bp_xprofile_field_edit_html_elements', $r, get_class( $this ) );
 
-		foreach ( $r as $name => $value ) {
-			$html .= sprintf( '%s="%s" ', sanitize_key( $name ), esc_attr( $value ) );
-		}
-
-		return $html;
+		return bp_get_form_field_attributes( sanitize_key( bp_get_the_profile_field_name() ), $r );
 	}
 }
 
@@ -3734,11 +3735,11 @@ class BP_XProfile_Query {
 			if ( 'relation' === $key ) {
 				$relation = $query;
 
-			} else if ( ! is_array( $query ) ) {
+			} elseif ( ! is_array( $query ) ) {
 				continue;
 
 			// First-order clause.
-			} else if ( $this->is_first_order_clause( $query ) ) {
+			} elseif ( $this->is_first_order_clause( $query ) ) {
 				if ( isset( $query['value'] ) && array() === $query['value'] ) {
 					unset( $query['value'] );
 				}
@@ -3768,7 +3769,7 @@ class BP_XProfile_Query {
 		 * This value will not actually be used to join clauses, but it
 		 * simplifies the logic around combining key-only queries.
 		 */
-		} else if ( 1 === count( $clean_queries ) ) {
+		} elseif ( 1 === count( $clean_queries ) ) {
 			$clean_queries['relation'] = 'OR';
 
 		// Default to AND.
@@ -3885,7 +3886,7 @@ class BP_XProfile_Query {
 		foreach ( $query as $key => &$clause ) {
 			if ( 'relation' === $key ) {
 				$relation = $query['relation'];
-			} else if ( is_array( $clause ) ) {
+			} elseif ( is_array( $clause ) ) {
 
 				// This is a first-order clause.
 				if ( $this->is_first_order_clause( $clause ) ) {
@@ -3894,7 +3895,7 @@ class BP_XProfile_Query {
 					$where_count = count( $clause_sql['where'] );
 					if ( ! $where_count ) {
 						$sql_chunks['where'][] = '';
-					} else if ( 1 === $where_count ) {
+					} elseif ( 1 === $where_count ) {
 						$sql_chunks['where'][] = $clause_sql['where'][0];
 					} else {
 						$sql_chunks['where'][] = '( ' . implode( ' AND ', $clause_sql['where'] ) . ' )';
@@ -4149,7 +4150,7 @@ class BP_XProfile_Query {
 				$compatible_compares = array( '=', 'IN', 'BETWEEN', 'LIKE', 'REGEXP', 'RLIKE', '>', '>=', '<', '<=' );
 
 			// Clauses joined by AND with "negative" operators share a join only if they also share a key.
-			} else if ( isset( $sibling['field_id'] ) && isset( $clause['field_id'] ) && $sibling['field_id'] === $clause['field_id'] ) {
+			} elseif ( isset( $sibling['field_id'] ) && isset( $clause['field_id'] ) && $sibling['field_id'] === $clause['field_id'] ) {
 				$compatible_compares = array( '!=', 'NOT IN', 'NOT LIKE' );
 			}
 

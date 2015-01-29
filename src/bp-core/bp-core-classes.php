@@ -7,7 +7,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * BuddyPress User Query class.
@@ -278,7 +278,7 @@ class BP_User_Query {
 				if ( 'newest' == $type ) {
 					$sql['orderby'] = "ORDER BY u.user_id";
 					$sql['order'] = "DESC";
-				} else if ( 'random' == $type ) {
+				} elseif ( 'random' == $type ) {
 					$sql['orderby'] = "ORDER BY rand()";
 				} else {
 					$sql['orderby'] = "ORDER BY u.date_recorded";
@@ -600,7 +600,6 @@ class BP_User_Query {
 	 *
 	 * @since BuddyPress (1.7.0)
 	 *
-	 * @global BuddyPress $bp Global BuddyPress settings object.
 	 * @global WPDB $wpdb Global WordPress database access object.
 	 */
 	public function populate_extras() {
@@ -624,8 +623,6 @@ class BP_User_Query {
 
 		// Turn user ID's into a query-usable, comma separated value
 		$user_ids_sql = implode( ',', wp_parse_id_list( $this->user_ids ) );
-
-		$bp = buddypress();
 
 		/**
 		 * Use this action to independently populate your own custom extras.
@@ -664,7 +661,7 @@ class BP_User_Query {
 			$this->results[$uindex]->total_friend_count = 0;
 		}
 
-		// Create, prepare, and run the seperate usermeta query
+		// Create, prepare, and run the separate usermeta query
 		$user_metas = $wpdb->get_results( $wpdb->prepare( "SELECT user_id, meta_key, meta_value FROM {$wpdb->usermeta} WHERE meta_key IN (%s,%s) AND user_id IN ({$user_ids_sql})", $total_friend_count_key, $bp_latest_update_key ) );
 
 		// The $members_template global expects the index key to be different
@@ -1832,7 +1829,7 @@ class BP_Core_Notification {
 	 * @global wpdb $wpdb WordPress database object
 	 * @param string $item_id The item id that they notifications are to be for.
 	 * @param string $component_name The component that the notifications are to be from.
-	 * @param string $component_action The action that the notificationsa are to be from.
+	 * @param string $component_action The action that the notifications are to be from.
 	 * @param string $secondary_item_id Optional secondary item id that the notifications are to have.
 	 * @static
 	 */
@@ -2035,7 +2032,7 @@ class BP_Button {
 
 			// No button if viewing your own profile (and not in
 			// a members loop)
-			} else if ( bp_is_my_profile() ) {
+			} elseif ( bp_is_my_profile() ) {
 				return false;
 			}
 		}
@@ -2329,7 +2326,6 @@ class BP_Walker_Nav_Menu extends Walker_Nav_Menu {
 		if ( empty( $elements ) ) // nothing to walk
 			return $output;
 
-		$id_field     = $this->db_fields['id'];
 		$parent_field = $this->db_fields['parent'];
 
 		// flat display
@@ -2762,121 +2758,120 @@ class BP_Members_Suggestions extends BP_Suggestions {
  */
 abstract class BP_Recursive_Query {
 
-        /**
-         * Query arguments passed to the constructor.
-         *
-         * @since BuddyPress (2.2.0)
-         * @access public
-         * @var array
-         */
-        public $queries = array();
+	/**
+	 * Query arguments passed to the constructor.
+	 *
+	 * @since BuddyPress (2.2.0)
+	 * @access public
+	 * @var array
+	 */
+	public $queries = array();
 
-        /**
-         * Generate SQL clauses to be appended to a main query.
-         *
-         * Extending classes should call this method from within a publicly
-         * accessible get_sql() method, and manipulate the SQL as necessary.
-         * For example, {@link BP_XProfile_Query::get_sql()} is merely a wrapper for
-         * get_sql_clauses(), while {@link BP_Activity_Query::get_sql()} discards
-         * the empty 'join' clause, and only passes the 'where' clause.
-         *
-         * @since BuddyPress (2.2.0)
-         * @access protected
-         *
-         * @param  string $primary_table
-         * @param  string $primary_id_column
-         * @return array
-         */
-        protected function get_sql_clauses() {
-                $sql = $this->get_sql_for_query( $this->queries );
+	/**
+	 * Generate SQL clauses to be appended to a main query.
+	 *
+	 * Extending classes should call this method from within a publicly
+	 * accessible get_sql() method, and manipulate the SQL as necessary.
+	 * For example, {@link BP_XProfile_Query::get_sql()} is merely a wrapper for
+	 * get_sql_clauses(), while {@link BP_Activity_Query::get_sql()} discards
+	 * the empty 'join' clause, and only passes the 'where' clause.
+	 *
+	 * @since BuddyPress (2.2.0)
+	 * @access protected
+	 *
+	 * @param  string $primary_table
+	 * @param  string $primary_id_column
+	 * @return array
+	 */
+	protected function get_sql_clauses() {
+		$sql = $this->get_sql_for_query( $this->queries );
 
-                if ( ! empty( $sql['where'] ) ) {
-                        $sql['where'] = ' AND ' . "\n" . $sql['where'] . "\n";
-                }
+		if ( ! empty( $sql['where'] ) ) {
+			$sql['where'] = ' AND ' . "\n" . $sql['where'] . "\n";
+		}
 
-                return $sql;
-        }
+		return $sql;
+	}
 
-        /**
-         * Generate SQL clauses for a single query array.
-         *
-         * If nested subqueries are found, this method recurses the tree to
-         * produce the properly nested SQL.
-         *
-         * Subclasses generally do not need to call this method. It is invoked
-         * automatically from get_sql_clauses().
-         *
-         * @since BuddyPress (2.2.0)
-         * @access protected
-         *
-         * @param  array $query Query to parse.
-         * @param  int   $depth Optional. Number of tree levels deep we
-         *                      currently are. Used to calculate indentation.
-         * @return array
-         */
-        protected function get_sql_for_query( $query, $depth = 0 ) {
-                $sql_chunks = array(
-                        'join'  => array(),
-                        'where' => array(),
-                );
+	/**
+	 * Generate SQL clauses for a single query array.
+	 *
+	 * If nested subqueries are found, this method recurses the tree to
+	 * produce the properly nested SQL.
+	 *
+	 * Subclasses generally do not need to call this method. It is invoked
+	 * automatically from get_sql_clauses().
+	 *
+	 * @since BuddyPress (2.2.0)
+	 * @access protected
+	 *
+	 * @param  array $query Query to parse.
+	 * @param  int   $depth Optional. Number of tree levels deep we
+	 *                      currently are. Used to calculate indentation.
+	 * @return array
+	 */
+	protected function get_sql_for_query( $query, $depth = 0 ) {
+		$sql_chunks = array(
+			'join'  => array(),
+			'where' => array(),
+		);
 
-                $sql = array(
-                        'join'  => '',
-                        'where' => '',
-                );
+		$sql = array(
+			'join'  => '',
+			'where' => '',
+		);
 
-                $indent = '';
-                for ( $i = 0; $i < $depth; $i++ ) {
-                        $indent .= "\t";
-                }
+		$indent = '';
+		for ( $i = 0; $i < $depth; $i++ ) {
+			$indent .= "\t";
+		}
 
-                foreach ( $query as $key => $clause ) {
-                        if ( 'relation' === $key ) {
-                                $relation = $query['relation'];
-                        } else if ( is_array( $clause ) ) {
-                                // This is a first-order clause
-                                if ( $this->is_first_order_clause( $clause ) ) {
-                                        $clause_sql = $this->get_sql_for_clause( $clause, $query );
+		foreach ( $query as $key => $clause ) {
+			if ( 'relation' === $key ) {
+				$relation = $query['relation'];
+			} elseif ( is_array( $clause ) ) {
+				// This is a first-order clause
+				if ( $this->is_first_order_clause( $clause ) ) {
+					$clause_sql = $this->get_sql_for_clause( $clause, $query );
 
-                                        $where_count = count( $clause_sql['where'] );
-                                        if ( ! $where_count ) {
-                                                $sql_chunks['where'][] = '';
-                                        } else if ( 1 === $where_count ) {
-                                                $sql_chunks['where'][] = $clause_sql['where'][0];
-                                        } else {
-                                                $sql_chunks['where'][] = '( ' . implode( ' AND ', $clause_sql['where'] ) . ' )';
-                                        }
+					$where_count = count( $clause_sql['where'] );
+					if ( ! $where_count ) {
+						$sql_chunks['where'][] = '';
+					} elseif ( 1 === $where_count ) {
+						$sql_chunks['where'][] = $clause_sql['where'][0];
+					} else {
+						$sql_chunks['where'][] = '( ' . implode( ' AND ', $clause_sql['where'] ) . ' )';
+					}
 
-                                        $sql_chunks['join'] = array_merge( $sql_chunks['join'], $clause_sql['join'] );
-                                // This is a subquery
-                                } else {
-                                        $clause_sql = $this->get_sql_for_query( $clause, $depth + 1 );
+					$sql_chunks['join'] = array_merge( $sql_chunks['join'], $clause_sql['join'] );
+				// This is a subquery
+				} else {
+					$clause_sql = $this->get_sql_for_query( $clause, $depth + 1 );
 
-                                        $sql_chunks['where'][] = $clause_sql['where'];
-                                        $sql_chunks['join'][]  = $clause_sql['join'];
+					$sql_chunks['where'][] = $clause_sql['where'];
+					$sql_chunks['join'][]  = $clause_sql['join'];
+				}
+			}
+		}
 
-                                }
-                        }
-                }
+		// Filter empties
+		$sql_chunks['join']  = array_filter( $sql_chunks['join'] );
+		$sql_chunks['where'] = array_filter( $sql_chunks['where'] );
 
-                // Filter empties
-                $sql_chunks['join']  = array_filter( $sql_chunks['join'] );
-                $sql_chunks['where'] = array_filter( $sql_chunks['where'] );
+		if ( empty( $relation ) ) {
+			$relation = 'AND';
+		}
 
-                if ( empty( $relation ) ) {
-                        $relation = 'AND';
-                }
+		if ( ! empty( $sql_chunks['join'] ) ) {
+			$sql['join'] = implode( ' ', array_unique( $sql_chunks['join'] ) );
+		}
 
-                if ( ! empty( $sql_chunks['join'] ) ) {
-                        $sql['join'] = implode( ' ', array_unique( $sql_chunks['join'] ) );
-                }
+		if ( ! empty( $sql_chunks['where'] ) ) {
+			$sql['where'] = '( ' . "\n\t" . $indent . implode( ' ' . "\n\t" . $indent . $relation . ' ' . "\n\t" . $indent, $sql_chunks['where'] ) . "\n" . $indent . ')' . "\n";
+		}
 
-                if ( ! empty( $sql_chunks['where'] ) ) {
-                        $sql['where'] = '( ' . "\n\t" . $indent . implode( ' ' . "\n\t" . $indent . $relation . ' ' . "\n\t" . $indent, $sql_chunks['where'] ) . "\n" . $indent . ')' . "\n";
-                }
-
-                return $sql;
-        }
+		return $sql;
+	}
 
 	/**
 	 * Recursive-friendly query sanitizer.
@@ -2904,11 +2899,11 @@ abstract class BP_Recursive_Query {
 			if ( 'relation' === $key ) {
 				$relation = $query;
 
-			} else if ( ! is_array( $query ) ) {
+			} elseif ( ! is_array( $query ) ) {
 				continue;
 
 			// First-order clause.
-			} else if ( $this->is_first_order_clause( $query ) ) {
+			} elseif ( $this->is_first_order_clause( $query ) ) {
 				if ( isset( $query['value'] ) && array() === $query['value'] ) {
 					unset( $query['value'] );
 				}
@@ -2938,7 +2933,7 @@ abstract class BP_Recursive_Query {
 		 * This value will not actually be used to join clauses, but it
 		 * simplifies the logic around combining key-only queries.
 		 */
-		} else if ( 1 === count( $clean_queries ) ) {
+		} elseif ( 1 === count( $clean_queries ) ) {
 			$clean_queries['relation'] = 'OR';
 
 		// Default to AND.
@@ -2949,33 +2944,33 @@ abstract class BP_Recursive_Query {
 		return $clean_queries;
 	}
 
-        /**
-         * Generate JOIN and WHERE clauses for a first-order clause.
-         *
-         * Must be overridden in a subclass.
-         *
-         * @since BuddyPress (2.2.0)
-         * @access protected
-         *
-         * @param  array $clause       Array of arguments belonging to the clause.
-         * @param  array $parent_query Parent query to which the clause belongs.
-         * @return array {
-         *     @type array $join  Array of subclauses for the JOIN statement.
-         *     @type array $where Array of subclauses for the WHERE statement.
-         * }
-         */
-        abstract protected function get_sql_for_clause( $clause, $parent_query );
+	/**
+	 * Generate JOIN and WHERE clauses for a first-order clause.
+	 *
+	 * Must be overridden in a subclass.
+	 *
+	 * @since BuddyPress (2.2.0)
+	 * @access protected
+	 *
+	 * @param  array $clause       Array of arguments belonging to the clause.
+	 * @param  array $parent_query Parent query to which the clause belongs.
+	 * @return array {
+	 *     @type array $join  Array of subclauses for the JOIN statement.
+	 *     @type array $where Array of subclauses for the WHERE statement.
+	 * }
+	 */
+	abstract protected function get_sql_for_clause( $clause, $parent_query );
 
-        /**
-         * Determine whether a clause is first-order.
-         *
-         * Must be overridden in a subclass.
-         *
-         * @since BuddyPress (2.2.0)
-         * @access protected
-         *
-         * @param  array $q Clause to check.
-         * @return bool
-         */
-        abstract protected function is_first_order_clause( $query );
+	/**
+	 * Determine whether a clause is first-order.
+	 *
+	 * Must be overridden in a subclass.
+	 *
+	 * @since BuddyPress (2.2.0)
+	 * @access protected
+	 *
+	 * @param  array $q Clause to check.
+	 * @return bool
+	 */
+	abstract protected function is_first_order_clause( $query );
 }

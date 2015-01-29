@@ -8,7 +8,7 @@
  */
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 class BP_XProfile_Data_Template {
 	var $current_group = -1;
@@ -273,7 +273,7 @@ function bp_field_css_class( $class = false ) {
 		 *
 		 * @since BuddyPress (1.1.0)
 		 *
-		 * @parm array $css_classes Array of classes to be applied to field. Passed by reference.
+		 * @param array $css_classes Array of classes to be applied to field. Passed by reference.
 		 */
 		$css_classes = apply_filters_ref_array( 'bp_field_css_classes', array( &$css_classes ) );
 
