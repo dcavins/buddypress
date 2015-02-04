@@ -511,7 +511,7 @@ function bp_has_members( $args = '' ) {
 	$r = bp_parse_args( $args, array(
 		'type'            => 'active',
 		'page'            => 1,
-		'per_page'        => 20,
+		'per_page'        => 2,
 		'max'             => false,
 
 		'page_arg'        => 'upage',  // See https://buddypress.trac.wordpress.org/ticket/3679
@@ -645,6 +645,11 @@ function bp_members_pagination_links() {
 	 */
 	function bp_get_members_pagination_links() {
 		global $members_template;
+
+		$towrite = PHP_EOL . 'members template: ' . print_r($members_template, TRUE);
+		$fp = fopen('group-pagingation.txt', 'a');
+		fwrite($fp, $towrite);
+		fclose($fp);
 
 		/**
 		 * Filters the members pagination link.
