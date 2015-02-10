@@ -15,14 +15,14 @@
  * Description: BuddyPress helps you run any kind of social network on your WordPress, with member profiles, activity streams, user groups, messaging, and more.
  * Author:      The BuddyPress Community
  * Author URI:  http://buddypress.org
- * Version:     2.2
+ * Version:     2.3-alpha
  * Text Domain: buddypress
  * Domain Path: /bp-languages/
  * License:     GPLv2 or later (license.txt)
  */
 
 // Exit if accessed directly
-if ( ! defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
 // Assume you want to load from build
 $bp_loader = dirname( __FILE__ ) . '/build/bp-loader.php';

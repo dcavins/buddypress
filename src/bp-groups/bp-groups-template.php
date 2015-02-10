@@ -924,10 +924,11 @@ function bp_group_permalink( $group = false ) {
 	function bp_get_group_permalink( $group = false ) {
 		global $groups_template;
 
-		if ( empty( $group ) )
+		if ( empty( $group ) ) {
 			$group =& $groups_template->group;
+		}
 
-		return apply_filters( 'bp_get_group_permalink', trailingslashit( bp_get_root_domain() . '/' . bp_get_groups_root_slug() . '/' . $group->slug . '/' ) );
+		return apply_filters( 'bp_get_group_permalink', trailingslashit( bp_get_groups_directory_permalink() . $group->slug . '/' ) );
 	}
 
 /**
@@ -1498,7 +1499,6 @@ function bp_group_all_members_permalink() {
  * @todo Deprecate
  */
 function bp_group_search_form() {
-	global $bp;
 
 	$action = bp_displayed_user_domain() . bp_get_groups_slug() . '/my-groups/search/';
 	$label = __('Filter Groups', 'buddypress');
@@ -1595,9 +1595,7 @@ function bp_groups_pagination_count() {
  * @return bool
  */
 function bp_groups_auto_join() {
-	global $bp;
-
-	return apply_filters( 'bp_groups_auto_join', (bool)$bp->groups->auto_join );
+	return apply_filters( 'bp_groups_auto_join', (bool) buddypress()->groups->auto_join );
 }
 
 /**
@@ -1859,9 +1857,11 @@ function bp_group_show_invite_status_setting( $setting, $group = false ) {
  *         'admins'.
  */
 function bp_group_get_invite_status( $group_id = false ) {
-	global $bp, $groups_template;
+	global $groups_template;
 
 	if ( !$group_id ) {
+		$bp = buddypress();
+
 		if ( isset( $bp->groups->current_group->id ) ) {
 			// Default to the current group first
 			$group_id = $bp->groups->current_group->id;
@@ -2556,10 +2556,12 @@ function bp_group_accept_invite_link() {
 	 * @return string
 	 */
 	function bp_get_group_accept_invite_link( $group = false ) {
-		global $groups_template, $bp;
+		global $groups_template;
 
 		if ( empty( $group ) )
 			$group =& $groups_template->group;
+
+		$bp = buddypress();
 
 		return apply_filters( 'bp_get_group_accept_invite_link', wp_nonce_url( trailingslashit( bp_loggedin_user_domain() . bp_get_groups_slug() . '/invites/accept/' . $group->id ), 'groups_accept_invite' ) );
 	}
@@ -2578,10 +2580,12 @@ function bp_group_reject_invite_link() {
 	 * @return string
 	 */
 	function bp_get_group_reject_invite_link( $group = false ) {
-		global $groups_template, $bp;
+		global $groups_template;
 
 		if ( empty( $group ) )
 			$group =& $groups_template->group;
+
+		$bp = buddypress();
 
 		return apply_filters( 'bp_get_group_reject_invite_link', wp_nonce_url( trailingslashit( bp_loggedin_user_domain() . bp_get_groups_slug() . '/invites/reject/' . $group->id ), 'groups_reject_invite' ) );
 	}
@@ -2720,30 +2724,51 @@ function bp_group_new_topic_button( $group = false ) {
 		return bp_get_button( apply_filters( 'bp_get_group_new_topic_button', $button ) );
 	}
 
+/**
+ * Output button to join a group
+ *
+ * @since BuddyPress (1.0.0)
+ *
+ * @param object $group Single group object
+ */
 function bp_group_join_button( $group = false ) {
 	echo bp_get_group_join_button( $group );
 }
+	/**
+	 * Return button to join a group
+	 *
+	 * @since BuddyPress (1.0.0)
+	 *
+	 * @param object $group Single group object
+	 */
 	function bp_get_group_join_button( $group = false ) {
 		global $groups_template;
 
-		if ( empty( $group ) )
+		// Set group to current loop group if none passed
+		if ( empty( $group ) ) {
 			$group =& $groups_template->group;
+		}
 
-		if ( !is_user_logged_in() || bp_group_is_user_banned( $group ) )
+		// Don't show button if not logged in or previously banned
+		if ( ! is_user_logged_in() || bp_group_is_user_banned( $group ) ) {
 			return false;
+		}
 
 		// Group creation was not completed or status is unknown
-		if ( !$group->status )
+		if ( empty( $group->status ) ) {
 			return false;
+		}
 
 		// Already a member
-		if ( isset( $group->is_member ) && $group->is_member ) {
+		if ( ! empty( $group->is_member ) ) {
 
 			// Stop sole admins from abandoning their group
 	 		$group_admins = groups_get_group_admins( $group->id );
-		 	if ( 1 == count( $group_admins ) && $group_admins[0]->user_id == bp_loggedin_user_id() )
+		 	if ( ( 1 == count( $group_admins ) ) && ( bp_loggedin_user_id() === (int) $group_admins[0]->user_id ) ) {
 				return false;
+			}
 
+			// Setup button attributes
 			$button = array(
 				'id'                => 'leave_group',
 				'component'         => 'groups',
@@ -2764,7 +2789,6 @@ function bp_group_join_button( $group = false ) {
 			switch ( $group->status ) {
 				case 'hidden' :
 					return false;
-					break;
 
 				case 'public':
 					$button = array(
@@ -2870,7 +2894,7 @@ function bp_group_create_button() {
 			'link_text'  => __( 'Create a Group', 'buddypress' ),
 			'link_title' => __( 'Create a Group', 'buddypress' ),
 			'link_class' => 'group-create no-ajax',
-			'link_href'  => trailingslashit( bp_get_root_domain() ) . trailingslashit( bp_get_groups_root_slug() ) . trailingslashit( 'create' ),
+			'link_href'  => trailingslashit( bp_get_groups_directory_permalink() . 'create' ),
 			'wrapper'    => false,
 			'block_self' => false,
 		);
@@ -2936,37 +2960,60 @@ add_action( 'bp_groups_directory_group_filter', 'bp_group_backcompat_create_nav_
  * Prints a message if the group is not visible to the current user (it is a
  * hidden or private group, and the user does not have access).
  *
+ * @since BuddyPress (1.0.0)
+ *
  * @global BP_Groups_Template $groups_template Groups template object
  * @param object $group Group to get status message for. Optional; defaults to current group.
- * @since BuddyPress (1.0.0)
  */
 function bp_group_status_message( $group = null ) {
 	global $groups_template;
 
-	if ( ! $group )
+	// Group not passed so look for loop
+	if ( empty( $group ) ) {
 		$group =& $groups_template->group;
+	}
 
-	if ( 'private' == $group->status ) {
- 		if ( ! bp_group_has_requested_membership() ) {
-			if ( is_user_logged_in() && bp_group_is_invited() ) {
-				$message = __( 'You must accept your pending invitation before you can access this private group.', 'buddypress' );
-			} elseif ( is_user_logged_in() ) {
-				$message = __( 'This is a private group and you must request group membership in order to join.', 'buddypress' );
-			} else {
-				$message = __( 'This is a private group. To join you must be a registered site member and request group membership.', 'buddypress' );
-			}
+	// Group status is not set (maybe outside of group loop?)
+	if ( empty( $group->status ) ) {
+		$message = __( 'This group is not currently accessible.', 'buddypress' );
 
-		} else {
-			$message = __( 'This is a private group. Your membership request is awaiting approval from the group administrator.', 'buddypress' );
-		}
-
+	// Group has a status
 	} else {
-		$message = __( 'This is a hidden group and only invited members can join.', 'buddypress' );
+		switch( $group->status ) {
+
+			// Private group
+			case 'private' :
+				if ( ! bp_group_has_requested_membership() ) {
+					if ( is_user_logged_in() ) {
+						if ( bp_group_is_invited() ) {
+							$message = __( 'You must accept your pending invitation before you can access this private group.', 'buddypress' );
+						} else {
+							$message = __( 'This is a private group and you must request group membership in order to join.', 'buddypress' );
+						}
+					} else {
+						$message = __( 'This is a private group. To join you must be a registered site member and request group membership.', 'buddypress' );
+					}
+				} else {
+					$message = __( 'This is a private group. Your membership request is awaiting approval from the group administrator.', 'buddypress' );
+				}
+
+			// Hidden group
+			case 'hidden' :
+			default :
+				$message = __( 'This is a hidden group and only invited members can join.', 'buddypress' );
+		}
 	}
 
 	echo apply_filters( 'bp_group_status_message', $message, $group );
 }
 
+/**
+ * Output hidden form fields for group.
+ *
+ * This function is no longer used, but may still be used by older themes.
+ *
+ * @since BuddyPress (1.0.0)
+ */
 function bp_group_hidden_fields() {
 	if ( isset( $_REQUEST['s'] ) ) {
 		echo '<input type="hidden" id="search_terms" value="' . esc_attr( $_REQUEST['s'] ) . '" name="search_terms" />';
@@ -2981,38 +3028,63 @@ function bp_group_hidden_fields() {
 	}
 }
 
+/**
+ * Output the total number of groups
+ *
+ * @since BuddyPress (1.0.0)
+ */
 function bp_total_group_count() {
 	echo bp_get_total_group_count();
 }
+	/**
+	 * Return the total number of groups
+	 *
+	 * @since BuddyPress (1.0.0)
+	 * @return type
+	 */
 	function bp_get_total_group_count() {
 		return apply_filters( 'bp_get_total_group_count', groups_get_total_group_count() );
 	}
 
+/**
+ * Output the total number of groups a user belongs to
+ *
+ * @since BuddyPress (1.0.0)
+ *
+ * @param int $user_id User ID to get group membership count
+ */
 function bp_total_group_count_for_user( $user_id = 0 ) {
 	echo bp_get_total_group_count_for_user( $user_id );
 }
+	/**
+	 * Return the total number of groups a user belongs to
+	 *
+	 * Filtered by `bp_core_number_format()` by default
+	 *
+	 * @since BuddyPress (1.0.0)
+	 *
+	 * @param int $user_id User ID to get group membership count
+	 */
 	function bp_get_total_group_count_for_user( $user_id = 0 ) {
-		return apply_filters( 'bp_get_total_group_count_for_user', groups_total_groups_for_user( $user_id ), $user_id );
+		$count = groups_total_groups_for_user( $user_id );
+
+		return apply_filters( 'bp_get_total_group_count_for_user', $count, $user_id );
 	}
-	add_filter( 'bp_get_total_group_count_for_user', 'bp_core_number_format' );
 
-
-/***************************************************************************
- * Group Members Template Tags
- **/
+/** Group Members *************************************************************/
 
 class BP_Groups_Group_Members_Template {
-	var $current_member = -1;
-	var $member_count;
-	var $members;
-	var $member;
+	public $current_member = -1;
+	public $member_count;
+	public $members;
+	public $member;
 
-	var $in_the_loop;
+	public $in_the_loop;
 
-	var $pag_page;
-	var $pag_num;
-	var $pag_links;
-	var $total_group_count;
+	public $pag_page;
+	public $pag_num;
+	public $pag_links;
+	public $total_group_count;
 
 	/**
 	 * Constructor.
@@ -3034,7 +3106,7 @@ class BP_Groups_Group_Members_Template {
 	 *     @type string $search_terms Optional. Search terms to match.
 	 * }
 	 */
-	function __construct( $args = array() ) {
+	public function __construct( $args = array() ) {
 
 		// Backward compatibility with old method of passing arguments
 		if ( ! is_array( $args ) || func_num_args() > 1 ) {
@@ -3068,9 +3140,6 @@ class BP_Groups_Group_Members_Template {
 			'type'                => 'last_joined',
 		) );
 
-		// @todo No
-		extract( $r );
-
 		$this->pag_arg  = sanitize_key( $r['page_arg'] );
 		$this->pag_page = bp_sanitize_pagination_arg( $this->pag_arg, $r['page']     );
 		$this->pag_num  = bp_sanitize_pagination_arg( 'num',          $r['per_page'] );
@@ -3080,7 +3149,7 @@ class BP_Groups_Group_Members_Template {
 		 * It can differ when using {@link bp_group_has_members()} outside the Groups screens.
 		 */
 		$current_group = groups_get_current_group();
-		if ( ! $current_group || $current_group && $current_group->id !== bp_get_current_group_id() ) {
+		if ( empty( $current_group ) || ( $current_group && $current_group->id !== bp_get_current_group_id() ) ) {
 			$current_group = groups_get_group( array( 'group_id' => $r['group_id'] ) );
 		}
 
@@ -3095,22 +3164,22 @@ class BP_Groups_Group_Members_Template {
 		$members_args['page']     = $this->pag_page;
 		$members_args['per_page'] = $this->pag_num;
 
+		// Get group members for this loop
 		$this->members = groups_get_group_members( $members_args );
 
-		if ( !$max || $max >= (int) $this->members['count'] )
+		if ( empty( $r['max'] ) || ( $r['max'] >= (int) $this->members['count'] ) ) {
 			$this->total_member_count = (int) $this->members['count'];
-		else
-			$this->total_member_count = (int) $max;
+		} else {
+			$this->total_member_count = (int) $r['max'];
+		}
 
+		// Reset members array for subsequent looping
 		$this->members = $this->members['members'];
 
-		if ( $max ) {
-			if ( $max >= count($this->members) )
-				$this->member_count = count($this->members);
-			else
-				$this->member_count = (int) $max;
+		if ( empty( $r['max'] ) || ( $r['max'] >= count( $this->members ) ) ) {
+			$this->member_count = (int) count( $this->members );
 		} else {
-			$this->member_count = count($this->members);
+			$this->member_count = (int) $r['max'];
 		}
 
 		$this->pag_links = paginate_links( array(
@@ -3122,35 +3191,37 @@ class BP_Groups_Group_Members_Template {
 			'next_text' => '&rarr;',
 			'mid_size'  => 1,
 			'add_args'  => array(),
-		));
+		) );
 	}
 
-	function has_members() {
-		if ( $this->member_count )
+	public function has_members() {
+		if ( ! empty( $this->member_count ) ) {
 			return true;
+		}
 
 		return false;
 	}
 
-	function next_member() {
+	public function next_member() {
 		$this->current_member++;
-		$this->member = $this->members[$this->current_member];
+		$this->member = $this->members[ $this->current_member ];
 
 		return $this->member;
 	}
 
-	function rewind_members() {
+	public function rewind_members() {
 		$this->current_member = -1;
 		if ( $this->member_count > 0 ) {
 			$this->member = $this->members[0];
 		}
 	}
 
-	function members() {
-		if ( $this->current_member + 1 < $this->member_count ) {
+	public function members() {
+		$tick = intval( $this->current_member + 1 );
+		if ( $tick < $this->member_count ) {
 			return true;
-		} elseif ( $this->current_member + 1 == $this->member_count ) {
-			do_action('loop_end');
+		} elseif ( $tick == $this->member_count ) {
+			do_action( 'loop_end' );
 			// Do some cleaning up after the loop
 			$this->rewind_members();
 		}
@@ -3159,13 +3230,14 @@ class BP_Groups_Group_Members_Template {
 		return false;
 	}
 
-	function the_member() {
-
+	public function the_member() {
 		$this->in_the_loop = true;
 		$this->member      = $this->next_member();
 
-		if ( 0 == $this->current_member ) // loop has just started
-			do_action('loop_start');
+		// loop has just started
+		if ( 0 == $this->current_member ) {
+			do_action( 'loop_start' );
+		}
 	}
 }
 
@@ -3553,7 +3625,7 @@ function bp_user_can_create_groups() {
 }
 
 function bp_group_creation_tabs() {
-	global $bp;
+	$bp = buddypress();
 
 	if ( !is_array( $bp->groups->group_creation_steps ) )
 		return false;
@@ -3568,7 +3640,7 @@ function bp_group_creation_tabs() {
 	foreach ( (array) $bp->groups->group_creation_steps as $slug => $step ) {
 		$is_enabled = bp_are_previous_group_creation_steps_complete( $slug ); ?>
 
-		<li<?php if ( bp_get_groups_current_create_step() == $slug ) : ?> class="current"<?php endif; ?>><?php if ( $is_enabled ) : ?><a href="<?php echo bp_get_root_domain() . '/' . bp_get_groups_root_slug() ?>/create/step/<?php echo $slug ?>/"><?php else: ?><span><?php endif; ?><?php echo $counter ?>. <?php echo $step['name'] ?><?php if ( $is_enabled ) : ?></a><?php else: ?></span><?php endif ?></li><?php
+		<li<?php if ( bp_get_groups_current_create_step() == $slug ) : ?> class="current"<?php endif; ?>><?php if ( $is_enabled ) : ?><a href="<?php bp_groups_directory_permalink(); ?>create/step/<?php echo $slug ?>/"><?php else: ?><span><?php endif; ?><?php echo $counter ?>. <?php echo $step['name'] ?><?php if ( $is_enabled ) : ?></a><?php else: ?></span><?php endif ?></li><?php
 		$counter++;
 	}
 
@@ -3578,7 +3650,7 @@ function bp_group_creation_tabs() {
 }
 
 function bp_group_creation_stage_title() {
-	global $bp;
+	$bp = buddypress();
 
 	echo apply_filters( 'bp_group_creation_stage_title', '<span>&mdash; ' . $bp->groups->group_creation_steps[bp_get_groups_current_create_step()]['name'] . '</span>' );
 }
@@ -3587,22 +3659,23 @@ function bp_group_creation_form_action() {
 	echo bp_get_group_creation_form_action();
 }
 	function bp_get_group_creation_form_action() {
-		global $bp;
+		$bp = buddypress();
 
 		if ( !bp_action_variable( 1 ) ) {
 			$keys = array_keys( $bp->groups->group_creation_steps );
 			$bp->action_variables[1] = array_shift( $keys );
 		}
 
-		return apply_filters( 'bp_get_group_creation_form_action', trailingslashit( bp_get_root_domain() . '/' . bp_get_groups_root_slug() . '/create/step/' . bp_action_variable( 1 ) ) );
+		return apply_filters( 'bp_get_group_creation_form_action', trailingslashit( bp_get_groups_directory_permalink() . 'create/step/' . bp_action_variable( 1 ) ) );
 	}
 
 function bp_is_group_creation_step( $step_slug ) {
-	global $bp;
 
 	/* Make sure we are in the groups component */
 	if ( !bp_is_groups_component() || !bp_is_current_action( 'create' ) )
 		return false;
+
+	$bp = buddypress();
 
 	/* If this the first step, we can just accept and return true */
 	$keys = array_keys( $bp->groups->group_creation_steps );
@@ -3623,7 +3696,7 @@ function bp_is_group_creation_step( $step_slug ) {
 }
 
 function bp_is_group_creation_step_complete( $step_slugs ) {
-	global $bp;
+	$bp = buddypress();
 
 	if ( !isset( $bp->groups->completed_create_steps ) )
 		return false;
@@ -3645,7 +3718,7 @@ function bp_is_group_creation_step_complete( $step_slugs ) {
 }
 
 function bp_are_previous_group_creation_steps_complete( $step_slug ) {
-	global $bp;
+	$bp = buddypress();
 
 	/* If this is the first group creation step, return true */
 	$keys = array_keys( $bp->groups->group_creation_steps );
@@ -3670,7 +3743,7 @@ function bp_new_group_id() {
 	echo bp_get_new_group_id();
 }
 	function bp_get_new_group_id() {
-		global $bp;
+		$bp = buddypress();
 
 		if ( isset( $bp->groups->new_group_id ) )
 			$new_group_id = $bp->groups->new_group_id;
@@ -3684,7 +3757,7 @@ function bp_new_group_name() {
 	echo bp_get_new_group_name();
 }
 	function bp_get_new_group_name() {
-		global $bp;
+		$bp = buddypress();
 
 		if ( isset( $bp->groups->current_group->name ) )
 			$name = $bp->groups->current_group->name;
@@ -3698,7 +3771,7 @@ function bp_new_group_description() {
 	echo bp_get_new_group_description();
 }
 	function bp_get_new_group_description() {
-		global $bp;
+		$bp = buddypress();
 
 		if ( isset( $bp->groups->current_group->description ) )
 			$description = $bp->groups->current_group->description;
@@ -3712,7 +3785,8 @@ function bp_new_group_enable_forum() {
 	echo bp_get_new_group_enable_forum();
 }
 	function bp_get_new_group_enable_forum() {
-		global $bp;
+		$bp = buddypress();
+
 		return (int) apply_filters( 'bp_get_new_group_enable_forum', $bp->groups->current_group->enable_forum );
 	}
 
@@ -3720,7 +3794,8 @@ function bp_new_group_status() {
 	echo bp_get_new_group_status();
 }
 	function bp_get_new_group_status() {
-		global $bp;
+		$bp = buddypress();
+
 		return apply_filters( 'bp_get_new_group_status', $bp->groups->current_group->status );
 	}
 
@@ -3728,7 +3803,7 @@ function bp_new_group_avatar( $args = '' ) {
 	echo bp_get_new_group_avatar( $args );
 }
 	function bp_get_new_group_avatar( $args = '' ) {
-		global $bp;
+		$bp = buddypress();
 
 		$defaults = array(
 			'type' => 'full',
@@ -3750,7 +3825,7 @@ function bp_group_creation_previous_link() {
 	echo bp_get_group_creation_previous_link();
 }
 	function bp_get_group_creation_previous_link() {
-		global $bp;
+		$bp = buddypress();
 
 		foreach ( (array) $bp->groups->group_creation_steps as $slug => $name ) {
 			if ( bp_is_action_variable( $slug ) )
@@ -3759,7 +3834,7 @@ function bp_group_creation_previous_link() {
 			$previous_steps[] = $slug;
 		}
 
-		return apply_filters( 'bp_get_group_creation_previous_link', trailingslashit( bp_get_root_domain() ) . bp_get_groups_root_slug() . '/create/step/' . array_pop( $previous_steps ) );
+		return apply_filters( 'bp_get_group_creation_previous_link', trailingslashit( bp_get_groups_directory_permalink() . 'create/step/' . array_pop( $previous_steps ) ) );
 	}
 
 /**
@@ -3779,7 +3854,7 @@ function bp_groups_current_create_step() {
 	 * @return string $current_create_step
 	 */
 	function bp_get_groups_current_create_step() {
-		global $bp;
+		$bp = buddypress();
 
 		if ( !empty( $bp->groups->current_create_step ) ) {
 			$current_create_step = $bp->groups->current_create_step;
@@ -3791,7 +3866,7 @@ function bp_groups_current_create_step() {
 	}
 
 function bp_is_last_group_creation_step() {
-	global $bp;
+	$bp = buddypress();
 
 	$keys      = array_keys( $bp->groups->group_creation_steps );
 	$last_step = array_pop( $keys );
@@ -3803,7 +3878,7 @@ function bp_is_last_group_creation_step() {
 }
 
 function bp_is_first_group_creation_step() {
-	global $bp;
+	$bp = buddypress();
 
 	$keys       = array_keys( $bp->groups->group_creation_steps );
 	$first_step = array_shift( $keys );
@@ -3818,7 +3893,7 @@ function bp_new_group_invite_friend_list() {
 	echo bp_get_new_group_invite_friend_list();
 }
 	function bp_get_new_group_invite_friend_list( $args = '' ) {
-		global $bp;
+		$bp = buddypress();
 
 		if ( !bp_is_active( 'friends' ) )
 			return false;
@@ -3875,7 +3950,7 @@ function bp_directory_groups_search_form() {
  * @todo Deprecate?
  */
 function bp_groups_header_tabs() {
-	global $bp;?>
+	$bp = buddypress(); ?>
 
 	<li<?php if ( !bp_action_variable( 0 ) || bp_is_action_variable( 'recently-active', 0 ) ) : ?> class="current"<?php endif; ?>><a href="<?php echo trailingslashit( bp_displayed_user_domain() . bp_get_groups_slug() . '/my-groups/recently-active' ) ?>"><?php _e( 'Recently Active', 'buddypress' ) ?></a></li>
 	<li<?php if ( bp_is_action_variable( 'recently-joined', 0 ) ) : ?> class="current"<?php endif; ?>><a href="<?php echo trailingslashit( bp_displayed_user_domain() . bp_get_groups_slug() . '/my-groups/recently-joined' ) ?>"><?php _e( 'Recently Joined', 'buddypress' ) ?></a></li>
@@ -3993,23 +4068,25 @@ function bp_group_current_avatar( $type = 'thumb' ) {
 		return apply_filters( 'bp_get_group_current_avatar', $group_avatar );
 	}
 
+/**
+ * Return whether a group has an avatar
+ *
+ * @since BuddyPress (1.1.0)
+ *
+ * @param  int $group_id
+ * @return boolean
+ */
 function bp_get_group_has_avatar( $group_id = false ) {
-	global $bp;
 
 	if ( false === $group_id ) {
 		$group_id = bp_get_current_group_id();
 	}
 
-	// Todo - this looks like an overgeneral check
-	if ( ! empty( $_FILES ) ) {
-		return false;
-	}
-
 	$group_avatar = bp_core_fetch_avatar( array(
 		'item_id' => $group_id,
-		'object' => 'group',
+		'object'  => 'group',
 		'no_grav' => true,
-		'html' => false,
+		'html'    => false,
 	) );
 
 	if ( bp_core_avatar_default( 'local' ) === $group_avatar ) {
@@ -4023,7 +4100,7 @@ function bp_group_avatar_delete_link() {
 	echo bp_get_group_avatar_delete_link();
 }
 	function bp_get_group_avatar_delete_link() {
-		global $bp;
+		$bp = buddypress();
 
 		return apply_filters( 'bp_get_group_avatar_delete_link', wp_nonce_url( bp_get_group_permalink( $bp->groups->current_group ) . 'admin/group-avatar/delete', 'bp_group_avatar_delete' ) );
 	}
@@ -4048,23 +4125,20 @@ function bp_custom_group_fields() {
 	do_action( 'groups_custom_group_fields' );
 }
 
-
-/************************************************************************************
- * Membership Requests Template Tags
- **/
+/** Group Membership Requests *************************************************/
 
 class BP_Groups_Membership_Requests_Template {
-	var $current_request = -1;
-	var $request_count;
-	var $requests;
-	var $request;
+	public $current_request = -1;
+	public $request_count;
+	public $requests;
+	public $request;
 
-	var $in_the_loop;
+	public $in_the_loop;
 
-	var $pag_page;
-	var $pag_num;
-	var $pag_links;
-	var $total_request_count;
+	public $pag_page;
+	public $pag_num;
+	public $pag_links;
+	public $total_request_count;
 
 	/**
 	 * Constructor method.
@@ -4078,7 +4152,7 @@ class BP_Groups_Membership_Requests_Template {
 	 *     @type int $max Max items to return. Default: false (show all)
 	 * }
 	 */
-	function __construct( $args = array() ) {
+	public function __construct( $args = array() ) {
 
 		// Backward compatibility with old method of passing arguments
 		if ( ! is_array( $args ) || func_num_args() > 1 ) {
@@ -4133,18 +4207,16 @@ class BP_Groups_Membership_Requests_Template {
 			$this->requests[ $rk ]->group_id   = $r['group_id'];
 		}
 
-		if ( !$r['max'] || $r['max'] >= (int) $mquery->total_users )
+		if ( empty( $r['max'] ) || ( $r['max'] >= (int) $mquery->total_users ) ) {
 			$this->total_request_count = (int) $mquery->total_users;
-		else
-			$this->total_request_count = (int) $r['max'];
-
-		if ( $r['max'] ) {
-			if ( $r['max'] >= count($this->requests) )
-				$this->request_count = count($this->requests);
-			else
-				$this->request_count = (int) $r['max'];
 		} else {
-			$this->request_count = count($this->requests);
+			$this->total_request_count = (int) $r['max'];
+		}
+
+		if ( empty( $r['max'] ) || ( $r['max'] >= count( $this->requests ) ) ) {
+			$this->request_count = count( $this->requests );
+		} else {
+			$this->request_count = (int) $r['max'];
 		}
 
 		$this->pag_links = paginate_links( array(
@@ -4159,32 +4231,35 @@ class BP_Groups_Membership_Requests_Template {
 		) );
 	}
 
-	function has_requests() {
-		if ( $this->request_count )
+	public function has_requests() {
+		if ( ! empty( $this->request_count ) ) {
 			return true;
+		}
 
 		return false;
 	}
 
-	function next_request() {
+	public function next_request() {
 		$this->current_request++;
-		$this->request = $this->requests[$this->current_request];
+		$this->request = $this->requests[ $this->current_request ];
 
 		return $this->request;
 	}
 
-	function rewind_requests() {
+	public function rewind_requests() {
 		$this->current_request = -1;
 
-		if ( $this->request_count > 0 )
+		if ( $this->request_count > 0 ) {
 			$this->request = $this->requests[0];
+		}
 	}
 
-	function requests() {
-		if ( $this->current_request + 1 < $this->request_count ) {
+	public function requests() {
+		$tick = intval( $this->current_request + 1 );
+		if ( $tick < $this->request_count ) {
 			return true;
-		} elseif ( $this->current_request + 1 == $this->request_count ) {
-			do_action('group_request_loop_end');
+		} elseif ( $tick == $this->request_count ) {
+			do_action( 'group_request_loop_end' );
 			// Do some cleaning up after the loop
 			$this->rewind_requests();
 		}
@@ -4193,12 +4268,14 @@ class BP_Groups_Membership_Requests_Template {
 		return false;
 	}
 
-	function the_request() {
+	public function the_request() {
 		$this->in_the_loop = true;
 		$this->request     = $this->next_request();
 
-		if ( 0 == $this->current_request ) // loop has just started
-			do_action('group_request_loop_start');
+		// loop has just started
+		if ( 0 == $this->current_request ) {
+			do_action( 'group_request_loop_start' );
+		}
 	}
 }
 
@@ -4332,22 +4409,20 @@ function bp_group_requests_pagination_count() {
 		return apply_filters( 'bp_get_group_requests_pagination_count', sprintf( _n( 'Viewing 1 request', 'Viewing %1$s - %2$s of %3$s requests', $total, 'buddypress' ), $from_num, $to_num, $total ), $from_num, $to_num, $total );
 	}
 
-/************************************************************************************
- * Invite Friends Template Tags
- **/
+/** Group Invitations *********************************************************/
 
 class BP_Groups_Invite_Template {
-	var $current_invite = -1;
-	var $invite_count;
-	var $invites;
-	var $invite;
+	public $current_invite = -1;
+	public $invite_count;
+	public $invites;
+	public $invite;
 
-	var $in_the_loop;
+	public $in_the_loop;
 
-	var $pag_page;
-	var $pag_num;
-	var $pag_links;
-	var $total_invite_count;
+	public $pag_page;
+	public $pag_num;
+	public $pag_links;
+	public $total_invite_count;
 
 	public function __construct( $args = array() ) {
 
@@ -4386,10 +4461,10 @@ class BP_Groups_Invite_Template {
 			'is_confirmed' => false,
 			'inviter_id'   => $r['user_id'],
 		) );
-		$this->invite_data = $iquery->results;
 
+		$this->invite_data        = $iquery->results;
 		$this->total_invite_count = $iquery->total_users;
-		$this->invites		  = array_values( wp_list_pluck( $this->invite_data, 'ID' ) );
+		$this->invites            = array_values( wp_list_pluck( $this->invite_data, 'ID' ) );
 		$this->invite_count       = count( $this->invites );
 
 		// If per_page is set to 0 (show all results), don't generate
@@ -4410,31 +4485,34 @@ class BP_Groups_Invite_Template {
 		}
 	}
 
-	function has_invites() {
-		if ( $this->invite_count )
+	public function has_invites() {
+		if ( ! empty( $this->invite_count ) ) {
 			return true;
+		}
 
 		return false;
 	}
 
-	function next_invite() {
+	public function next_invite() {
 		$this->current_invite++;
-		$this->invite = $this->invites[$this->current_invite];
+		$this->invite = $this->invites[ $this->current_invite ];
 
 		return $this->invite;
 	}
 
-	function rewind_invites() {
+	public function rewind_invites() {
 		$this->current_invite = -1;
-		if ( $this->invite_count > 0 )
+		if ( $this->invite_count > 0 ) {
 			$this->invite = $this->invites[0];
+		}
 	}
 
-	function invites() {
-		if ( $this->current_invite + 1 < $this->invite_count ) {
+	public function invites() {
+		$tick = intval( $this->current_invite + 1 );
+		if ( $tick < $this->invite_count ) {
 			return true;
-		} elseif ( $this->current_invite + 1 == $this->invite_count ) {
-			do_action('loop_end');
+		} elseif ( $tick == $this->invite_count ) {
+			do_action( 'loop_end' );
 			// Do some cleaning up after the loop
 			$this->rewind_invites();
 		}
@@ -4443,13 +4521,14 @@ class BP_Groups_Invite_Template {
 		return false;
 	}
 
-	function the_invite() {
+	public function the_invite() {
 		global $group_id;
-		$this->in_the_loop      = true;
-		$user_id                = $this->next_invite();
 
-		$this->invite           = new stdClass;
-		$this->invite->user     = $this->invite_data[ $user_id ];
+		$this->in_the_loop  = true;
+		$user_id            = $this->next_invite();
+
+		$this->invite       = new stdClass;
+		$this->invite->user = $this->invite_data[ $user_id ];
 
 		// This method previously populated the user object with
 		// BP_Core_User. We manually configure BP_Core_User data for
@@ -4458,7 +4537,7 @@ class BP_Groups_Invite_Template {
 			$this->invite->user->profile_data = BP_XProfile_ProfileData::get_all_for_user( $user_id );
 		}
 
-		$this->invite->user->avatar       = bp_core_fetch_avatar( array( 'item_id' => $user_id, 'type' => 'full', 'alt' => sprintf( __( 'Profile photo of %s', 'buddypress' ), $this->invite->user->fullname ) ) );
+		$this->invite->user->avatar       = bp_core_fetch_avatar( array( 'item_id' => $user_id, 'type' => 'full',  'alt' => sprintf( __( 'Profile photo of %s', 'buddypress' ), $this->invite->user->fullname ) ) );
 		$this->invite->user->avatar_thumb = bp_core_fetch_avatar( array( 'item_id' => $user_id, 'type' => 'thumb', 'alt' => sprintf( __( 'Profile photo of %s', 'buddypress' ), $this->invite->user->fullname ) ) );
 		$this->invite->user->avatar_mini  = bp_core_fetch_avatar( array( 'item_id' => $user_id, 'type' => 'thumb', 'alt' => sprintf( __( 'Profile photo of %s', 'buddypress' ), $this->invite->user->fullname ), 'width' => 30, 'height' => 30 ) );
 		$this->invite->user->email        = $this->invite->user->user_email;
@@ -4477,10 +4556,13 @@ class BP_Groups_Invite_Template {
 
 		$this->invite->user->total_blogs = null;
 
-		$this->invite->group_id = $group_id; // Global'ed in bp_group_has_invites()
+		// Global'ed in bp_group_has_invites()
+		$this->invite->group_id = $group_id;
 
-		if ( 0 == $this->current_invite ) // loop has just started
-			do_action('loop_start');
+		// loop has just started
+		if ( 0 == $this->current_invite ) {
+			do_action( 'loop_start' );
+		}
 	}
 }
 
@@ -4572,7 +4654,7 @@ function bp_group_invite_user_remove_invite_url() {
 		$user_id = intval( $invites_template->invite->user->id );
 
 		if ( bp_is_current_action( 'create' ) ) {
-			$uninvite_url = bp_get_root_domain() . '/' . bp_get_groups_root_slug() . '/create/step/group-invites/?user_id=' . $user_id;
+			$uninvite_url = bp_get_groups_directory_permalink() . 'create/step/group-invites/?user_id=' . $user_id;
 		} else {
 			$uninvite_url = bp_get_group_permalink( groups_get_current_group() ) . 'send-invites/remove/' . $user_id;
 		}
@@ -4626,9 +4708,7 @@ function bp_group_invite_pagination_count() {
 		return apply_filters( 'bp_get_groups_pagination_count', sprintf( _n( 'Viewing 1 invitation', 'Viewing %1$s - %2$s of %3$s invitations', $total, 'buddypress' ), $from_num, $to_num, $total ), $from_num, $to_num, $total );
 	}
 
-/***
- * Groups RSS Feed Template Tags
- */
+/** Group RSS *****************************************************************/
 
 /**
  * Hook group activity feed to <head>
@@ -4636,8 +4716,11 @@ function bp_group_invite_pagination_count() {
  * @since BuddyPress (1.5.0)
  */
 function bp_groups_activity_feed() {
-	if ( !bp_is_active( 'groups' ) || !bp_is_active( 'activity' ) || !bp_is_group() )
-		return; ?>
+
+	// Bail if not viewing a single group or activity is not active
+	if ( ! bp_is_active( 'groups' ) || ! bp_is_active( 'activity' ) || ! bp_is_group() ) {
+		return;
+	} ?>
 
 	<link rel="alternate" type="application/rss+xml" title="<?php bloginfo( 'name' ) ?> | <?php bp_current_group_name() ?> | <?php _e( 'Group Activity RSS Feed', 'buddypress' ) ?>" href="<?php bp_group_activity_feed_link() ?>" />
 
@@ -4645,12 +4728,29 @@ function bp_groups_activity_feed() {
 }
 add_action( 'bp_head', 'bp_groups_activity_feed' );
 
+/**
+ * Output the current group activity-stream RSS url
+ *
+ * @since BuddyPress (1.5.0)
+ */
 function bp_group_activity_feed_link() {
 	echo bp_get_group_activity_feed_link();
 }
+	/**
+	 * Return the current group activity-stream RSS url
+	 *
+	 * @since BuddyPress (1.5.0)
+	 * @return string
+	 */
 	function bp_get_group_activity_feed_link() {
-		return apply_filters( 'bp_get_group_activity_feed_link', bp_get_group_permalink( groups_get_current_group() ) . 'feed/' );
+		$current_group = groups_get_current_group();
+		$group_link    = bp_get_group_permalink( $current_group ) . 'feed';
+		$feed_link     = trailingslashit( $group_link );
+
+		return apply_filters( 'bp_get_group_activity_feed_link', $feed_link );
 	}
+
+/** Current Group *************************************************************/
 
 /**
  * Echoes the output of bp_get_current_group_id()
@@ -4701,6 +4801,7 @@ function bp_current_group_slug() {
 /**
  * Echoes the output of bp_get_current_group_name()
  *
+ * @since BuddyPress (1.5.0)
  */
 function bp_current_group_name() {
 	echo bp_get_current_group_name();

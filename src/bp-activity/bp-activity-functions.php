@@ -911,7 +911,6 @@ function bp_activity_total_favorites_for_user( $user_id = 0 ) {
  * @since BuddyPress (1.2.0)
  *
  * @global object $wpdb WordPress database access object.
- * @global object $bp BuddyPress global settings.
  *
  * @param int $activity_id ID of the activity item whose metadata is being deleted.
  * @param string $meta_key Optional. The key of the metadata being deleted. If
@@ -1078,7 +1077,6 @@ add_action( 'delete_user',       'bp_activity_remove_all_user_data' );
  * @since BuddyPress (1.6.0)
  *
  * @global object $wpdb WordPress database access object.
- * @global object $bp BuddyPress global settings.
  *
  * @param int $user_id ID of the user whose activity is being spammed.
  */
@@ -1147,7 +1145,6 @@ add_action( 'bp_make_spam_user', 'bp_activity_spam_all_user_data' );
  * @since BuddyPress (1.6.0)
  *
  * @global object $wpdb WordPress database access object.
- * @global object $bp BuddyPress global settings.
  *
  * @param int $user_id ID of the user whose activity is being hammed.
  */
@@ -2053,7 +2050,6 @@ function bp_activity_post_type_unpublish( $post_id = 0, $post = null ) {
  *
  * @since BuddyPress (1.2.0)
  *
- * @global object $bp BuddyPress global settings.
  * @uses wp_parse_args()
  * @uses bp_activity_add()
  * @uses apply_filters() To call the 'bp_activity_comment_action' hook.
@@ -2618,10 +2614,16 @@ function bp_activity_thumbnail_content_images( $content, $link = false, $args = 
 		preg_match( '/<img.*?(height\=[\'|"]{0,1}.*?[\'|"]{0,1})[\s|>]{1}/i', $matches[0][0], $height );
 		preg_match( '/<img.*?(width\=[\'|"]{0,1}.*?[\'|"]{0,1})[\s|>]{1}/i',  $matches[0][0], $width  );
 
-		if ( !empty( $src ) ) {
-			$src    = substr( substr( str_replace( 'src=',    '', $src[1]    ), 0, -1 ), 1 );
-			$height = substr( substr( str_replace( 'height=', '', $height[1] ), 0, -1 ), 1 );
-			$width  = substr( substr( str_replace( 'width=',  '', $width[1]  ), 0, -1 ), 1 );
+		if ( ! empty( $src ) ) {
+			$src = substr( substr( str_replace( 'src=', '', $src[1] ), 0, -1 ), 1 );
+
+			if ( isset( $width[1] ) ) {
+				$width = substr( substr( str_replace( 'width=', '', $width[1] ), 0, -1 ), 1 );
+			}
+
+			if ( isset( $height[1] ) ) {
+				$height = substr( substr( str_replace( 'height=', '', $height[1] ), 0, -1 ), 1 );
+			}
 
 			if ( empty( $width ) || empty( $height ) ) {
 				$width  = 100;
