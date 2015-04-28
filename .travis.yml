@@ -75,10 +75,10 @@ before_script:
     - wget http://components.ez.no/get/ConsoleTools-1.6.1.tgz
 
     - $PYRUS $PHPUNIT_HOME channel-discover pear.phpunit.de
-    - $PYRUS $PHPUNIT_HOME channel-discover components.ez.no
-    - $PYRUS $PHPUNIT_HOME channel-discover pear.symfony-project.com
-    - $PYRUS $PHPUNIT_HOME install Base-1.8.tgz 
-    - $PYRUS $PHPUNIT_HOME install ConsoleTools-1.6.1.tgz 
+    # - $PYRUS $PHPUNIT_HOME channel-discover components.ez.no
+    # - $PYRUS $PHPUNIT_HOME channel-discover pear.symfony-project.com
+    # - $PYRUS $PHPUNIT_HOME install Base-1.8.tgz 
+    # - $PYRUS $PHPUNIT_HOME install ConsoleTools-1.6.1.tgz 
 
     - $PYRUS $PHPUNIT_HOME install pear.phpunit.de/File_Iterator-1.2.6
     - $PYRUS $PHPUNIT_HOME install pear.phpunit.de/PHP_TokenStream-1.0.1
