@@ -7,29 +7,29 @@ sudo: false
 language: php
 
 php:
-#    - 5.2
-#    - 5.3
+    - 5.2
+    - 5.3
     - 5.4
-#    - 5.5
-#    - 5.6
+    - 5.5
+    - 5.6
 
 # WordPress comes from the Git mirror, where 'master' mirrors svn 'trunk' and
 # x.y mirrors the latest from the x.y branch
 env:
     - WP_VERSION=master
-#    - WP_VERSION=4.1
-#    - WP_VERSION=4.0
-#    - WP_VERSION=3.9
-#    - WP_VERSION=3.8
-#    - WP_VERSION=3.7
+    - WP_VERSION=4.1
+    - WP_VERSION=4.0
+    - WP_VERSION=3.9
+    - WP_VERSION=3.8
+    - WP_VERSION=3.7
 
 matrix:
-  fast_finish: true
-# include:
-#   - php: nightly
-#     env: WP_VERSION=master
-# allow_failures:
-#   - php: nightly
+    fast_finish: true
+    include:
+      - php: nightly
+        env: WP_VERSION=master
+    allow_failures:
+      - php: nightly
 
 # before_install: Failures in this section will result in build status 'errored'
 before_install:
@@ -61,42 +61,9 @@ before_install:
 before_script:
     - npm install
 
-    # Use an older version of 
-    - export BUILD_HOME=`pwd`
-    - git submodule update --init
-    - export PYRUS=`which pyrus`
-    - export PHPUNIT_HOME=`pwd`/../phpunit34/
-
-    - mkdir $PHPUNIT_HOME
-    - mkdir ${PHPUNIT_HOME}/bin
-    - cd $PHPUNIT_HOME
-    - $PYRUS $PHPUNIT_HOME set bin_dir ./bin
-    - wget http://components.ez.no/get/Base-1.8.tgz
-    - wget http://components.ez.no/get/ConsoleTools-1.6.1.tgz
-
-    - $PYRUS $PHPUNIT_HOME channel-discover pear.phpunit.de
-    # - $PYRUS $PHPUNIT_HOME channel-discover components.ez.no
-    # - $PYRUS $PHPUNIT_HOME channel-discover pear.symfony-project.com
-    # - $PYRUS $PHPUNIT_HOME install Base-1.8.tgz 
-    # - $PYRUS $PHPUNIT_HOME install ConsoleTools-1.6.1.tgz 
-
-    - $PYRUS $PHPUNIT_HOME install pear.phpunit.de/File_Iterator-1.2.6
-    - $PYRUS $PHPUNIT_HOME install pear.phpunit.de/PHP_TokenStream-1.0.1
-    - $PYRUS $PHPUNIT_HOME install pear.phpunit.de/PHP_CodeCoverage-1.0.5
-    - $PYRUS $PHPUNIT_HOME install pear.phpunit.de/PHP_Timer
-    - $PYRUS $PHPUNIT_HOME install --optionaldeps pear.phpunit.de/PHPUnit-3.6.12
-
-    - awk '{if(NR==1){print $0,"-d include_path='$PHPUNIT_HOME'php"}else{print }}' ${PHPUNIT_HOME}bin/phpunit > ${PHPUNIT_HOME}bin/phpunit34
-    - cat ${PHPUNIT_HOME}bin/phpunit34
-    - chmod 755 ${PHPUNIT_HOME}bin/phpunit34
-    - PHPUNIT=${PHPUNIT_HOME}bin/phpunit34
-    - export PHPUNIT
-    - $PHPUNIT --version
-
 # Run tests
 script: 
-    # - grunt travis
-    - $PHPUNIT --version
+    - grunt travis
 
 notifications:
     email: false
