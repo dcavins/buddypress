@@ -217,14 +217,18 @@ class BP_Members_Admin {
 	 * @return int
 	 */
 	private function get_user_id() {
-		$user_id = get_current_user_id();
-
-		// We'll need a user ID when not on the user admin
-		if ( ! empty( $_GET['user_id'] ) ) {
-			$user_id = $_GET['user_id'];
+		if ( ! empty( $this->user_id ) ) {
+			return $this->user_id;
 		}
 
-		return intval( $user_id );
+		$this->user_id = (int) get_current_user_id();
+
+		// We'll need a user ID when not on self profile
+		if ( ! empty( $_GET['user_id'] ) ) {
+			$this->user_id = (int) $_GET['user_id'];
+		}
+
+		return $this->user_id;
 	}
 
 	/**
@@ -579,7 +583,7 @@ class BP_Members_Admin {
 		}
 
 		/**
-		 * Fires after all of the members JavaScript and CSS is enqueued.
+		 * Fires after all of the members JavaScript and CSS are enqueued.
 		 *
 		 * @since BuddyPress (2.0.0)
 		 *
@@ -711,8 +715,8 @@ class BP_Members_Admin {
 			// Help panel - sidebar links
 			get_current_screen()->set_help_sidebar(
 				'<p><strong>' . __( 'For more information:', 'buddypress' ) . '</strong></p>' .
-				'<p>' . __( '<a href="http://codex.buddypress.org/buddypress-site-administration/managing-user-profiles/">Managing Profiles</a>', 'buddypress' ) . '</p>' .
-				'<p>' . __( '<a href="http://buddypress.org/support/">Support Forums</a>', 'buddypress' ) . '</p>'
+				'<p>' . __( '<a href="https://codex.buddypress.org/administrator-guide/extended-profiles/">Managing Profiles</a>', 'buddypress' ) . '</p>' .
+				'<p>' . __( '<a href="https://buddypress.org/support/">Support Forums</a>', 'buddypress' ) . '</p>'
 			);
 
 			// Register metaboxes for the edit screen.
@@ -787,7 +791,7 @@ class BP_Members_Admin {
 			 */
 			do_action( 'bp_members_admin_user_metaboxes', $this->is_self_profile, $user_id );
 
-			// Enqueue javascripts
+			// Enqueue JavaScript files
 			wp_enqueue_script( 'postbox'   );
 			wp_enqueue_script( 'dashboard' );
 
@@ -1329,7 +1333,7 @@ class BP_Members_Admin {
 		$url     = add_query_arg( 'page', 'bp-signups', bp_get_admin_url( 'users.php' ) );
 		$text    = sprintf( _x( 'Pending %s', 'signup users', 'buddypress' ), '<span class="count">(' . number_format_i18n( $signups ) . ')</span>' );
 
-		$views['registered'] = sprintf( '<a href="%1$s" class="%2$s">%3$s</a>', $url, $class, $text );
+		$views['registered'] = sprintf( '<a href="%1$s" class="%2$s">%3$s</a>', esc_url( $url ), $class, $text );
 
 		return $views;
 	}
@@ -1350,7 +1354,7 @@ class BP_Members_Admin {
 
 		if ( ! empty( $required ) ) {
 			require_once( ABSPATH . 'wp-admin/includes/class-wp-' . $required . '-list-table.php' );
-			require_once( buddypress()->members->admin->admin_dir . 'bp-members-classes.php'    );
+			require_once( buddypress()->members->admin->admin_dir . 'bp-members-admin-classes.php' );
 		}
 
 		return new $class();
@@ -1429,7 +1433,7 @@ class BP_Members_Admin {
 			// Help panel - sidebar links
 			get_current_screen()->set_help_sidebar(
 				'<p><strong>' . __( 'For more information:', 'buddypress' ) . '</strong></p>' .
-				'<p>' . __( '<a href="http://buddypress.org/support/">Support Forums</a>', 'buddypress' ) . '</p>'
+				'<p>' . __( '<a href="https://buddypress.org/support/">Support Forums</a>', 'buddypress' ) . '</p>'
 			);
 		} else {
 			if ( ! empty( $_REQUEST['signup_ids' ] ) ) {
@@ -1890,17 +1894,29 @@ class BP_Members_Admin {
 		switch ( $action ) {
 			case 'delete' :
 				$header_text = __( 'Delete Pending Accounts', 'buddypress' );
-				$helper_text = _n( 'You are about to delete the following account:', 'You are about to delete the following accounts:', count( $signup_ids ), 'buddypress' );
+				if ( 1 == count( $signup_ids ) ) {
+					$helper_text = __( 'You are about to delete the following account:', 'buddypress' );
+				} else {
+					$helper_text = __( 'You are about to delete the following accounts:', 'buddypress' );
+				}
 				break;
 
 			case 'activate' :
 				$header_text = __( 'Activate Pending Accounts', 'buddypress' );
-				$helper_text = _n( 'You are about to activate the following account:', 'You are about to activate the following accounts:', count( $signup_ids ), 'buddypress' );
+				if ( 1 == count( $signup_ids ) ) {
+					$helper_text = __( 'You are about to activate the following account:', 'buddypress' );
+				} else {
+					$helper_text = __( 'You are about to activate the following accounts:', 'buddypress' );
+				}
 				break;
 
 			case 'resend' :
 				$header_text = __( 'Resend Activation Emails', 'buddypress' );
-				$helper_text = _n( 'You are about to resend an activation email to the following account:', 'You are about to resend activation emails to the following accounts:', count( $signup_ids ), 'buddypress' );
+				if ( 1 == count( $signup_ids ) ) {
+					$helper_text = __( 'You are about to resend an activation email to the following account:', 'buddypress' );
+				} else {
+					$helper_text = __( 'You are about to resend an activation email to the following accounts:', 'buddypress' );
+				}
 				break;
 		}
 

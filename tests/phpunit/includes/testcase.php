@@ -44,7 +44,7 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 
 	function clean_up_global_scope() {
 		buddypress()->bp_nav                = buddypress()->bp_options_nav = buddypress()->action_variables = buddypress()->canonical_stack = buddypress()->unfiltered_uri = $GLOBALS['bp_unfiltered_uri'] = array();
-		buddypress()->current_component     = buddypress()->current_item = buddypress()->current_action = '';
+		buddypress()->current_component     = buddypress()->current_item = buddypress()->current_action = buddypress()->current_member_type = '';
 		buddypress()->unfiltered_uri_offset = 0;
 		buddypress()->is_single_item        = false;
 		buddypress()->current_user          = new stdClass();
@@ -287,42 +287,6 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 		do_action( 'bp_init' );
 	}
 
-	protected function checkRequirements() {
-		if ( WP_TESTS_FORCE_KNOWN_BUGS )
-			return;
-
-		parent::checkRequirements();
-
-		$tickets = PHPUnit_Util_Test::getTickets( get_class( $this ), $this->getName( false ) );
-		foreach ( $tickets as $ticket ) {
-			if ( 'BP' == substr( $ticket, 0, 2 ) ) {
-				$ticket = substr( $ticket, 2 );
-				if ( $ticket && is_numeric( $ticket ) )
-					$this->knownBPBug( $ticket );
-			}
-		}
-	}
-
-	/**
-	 * Skips the current test if there is an open BuddyPress ticket with id $ticket_id
-	 */
-	function knownBPBug( $ticket_id ) {
-		if ( WP_TESTS_FORCE_KNOWN_BUGS || in_array( $ticket_id, self::$forced_tickets ) )
-			return;
-
-		$trac_url = 'https://buddypress.trac.wordpress.org';
-
-		// When SSL is not available, use non-SSL mirror
-		// Primarily for travis-ci PHP 5.2 build
-		if ( ! extension_loaded( 'openssl' ) ) {
-			$trac_url = 'http://hardg.com/bp-open-tickets';
-		}
-
-		if ( ! TracTickets::isTracTicketClosed( $trac_url, $ticket_id ) ) {
-			$this->markTestSkipped( sprintf( 'BuddyPress Ticket #%d is not fixed', $ticket_id ) );
-		}
-	}
-
 	/**
 	 * WP's core tests use wp_set_current_user() to change the current
 	 * user during tests. BP caches the current user differently, so we
@@ -345,6 +309,7 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 			'date_modified' => bp_core_current_time(),
 			'is_confirmed'  => 1,
 			'is_admin'      => 0,
+			'is_mod'        => 0,
 			'invite_sent'   => 0,
 			'inviter_id'    => 0,
 		) );
@@ -354,6 +319,7 @@ class BP_UnitTestCase extends WP_UnitTestCase {
 		$new_member->user_id       = $user_id;
 		$new_member->inviter_id    = 0;
 		$new_member->is_admin      = $r['is_admin'];
+		$new_member->is_mod        = $r['is_mod'];
 		$new_member->user_title    = '';
 		$new_member->date_modified = $r['date_modified'];
 		$new_member->is_confirmed  = $r['is_confirmed'];

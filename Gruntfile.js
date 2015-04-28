@@ -69,6 +69,20 @@ module.exports = function( grunt ) {
 				}
 			}
 		},
+		sass: {
+			admin: {
+				cwd: SOURCE_DIR,
+				extDot: 'last',
+				expand: true,
+				ext: '.css',
+				flatten: true,
+				src: ['bp-templates/bp-legacy/css/*.scss'],
+				dest: SOURCE_DIR + 'bp-templates/bp-legacy/css/',
+				options: {
+					outputStyle: 'expanded'
+				}
+			}
+		},
 		cssjanus: {
 			core: {
 				expand: true,
@@ -163,6 +177,14 @@ module.exports = function( grunt ) {
 				'https://wordpress.org/plugins/buddypress/ */\n'
 			}
 		},
+		scsslint: {
+			options: {
+				bundleExec: false,
+				colorizeOutput: true,
+				config: '.scss-lint.yml'
+			},
+			core: [ SOURCE_DIR + 'bp-templates/bp-legacy/css/*.scss' ]
+		},
 		cssmin: {
 			minify: {
 				cwd: BUILD_DIR,
@@ -228,7 +250,7 @@ module.exports = function( grunt ) {
 	/**
 	 * Register tasks.
 	 */
-	grunt.registerTask( 'src',     ['jsvalidate:src', 'jshint', 'cssjanus'] );
+	grunt.registerTask( 'src',     ['jsvalidate:src', 'jshint', 'scsslint', 'sass', 'cssjanus'] );
 	grunt.registerTask( 'commit',  ['src', 'checktextdomain', 'imagemin'] );
 	grunt.registerTask( 'build',   ['commit', 'clean:all', 'copy:files', 'uglify', 'jsvalidate:build', 'cssmin', 'makepot', 'exec:bpdefault'] );
 	grunt.registerTask( 'release', ['build', 'exec:bbpress'] );
@@ -244,7 +266,7 @@ module.exports = function( grunt ) {
 
 	grunt.registerTask( 'test', 'Run all unit test tasks.', ['phpunit'] );
 
-	grunt.registerTask( 'jstest', 'Runs all javascript tasks.', [ 'jsvalidate:src', 'jshint' ] );
+	grunt.registerTask( 'jstest', 'Runs all JavaScript tasks.', [ 'jsvalidate:src', 'jshint' ] );
 
 	// Travis CI Task
 	grunt.registerTask( 'travis', ['jsvalidate:src', 'jshint', 'checktextdomain', 'test'] );

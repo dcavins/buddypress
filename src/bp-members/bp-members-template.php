@@ -78,7 +78,7 @@ function bp_members_root_slug() {
  * @uses bp_get_members_directory_permalink()
  */
 function bp_members_directory_permalink() {
-	echo bp_get_members_directory_permalink();
+	echo esc_url( bp_get_members_directory_permalink() );
 }
 	/**
 	 * Return member directory permalink.
@@ -188,7 +188,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var int
 	 */
-	var $current_member = -1;
+	public $current_member = -1;
 
 	/**
 	 * The number of members returned by the paged query.
@@ -196,7 +196,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var int
 	 */
-	var $member_count;
+	public $member_count;
 
 	/**
 	 * Array of members located by the query.
@@ -204,7 +204,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var array
 	 */
-	var $members;
+	public $members;
 
 	/**
 	 * The member object currently being iterated on.
@@ -212,7 +212,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var object
 	 */
-	var $member;
+	public $member;
 
 	/**
 	 * A flag for whether the loop is currently being iterated.
@@ -220,7 +220,15 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var bool
 	 */
-	var $in_the_loop;
+	public $in_the_loop;
+
+	/**
+	 * The type of member being requested. Used for ordering results.
+	 *
+	 * @access public
+	 * @var string
+	 */
+	public $type;
 
 	/**
 	 * The unique string used for pagination queries
@@ -228,7 +236,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var public
 	 */
-	var $pag_arg;
+	public $pag_arg;
 
 	/**
 	 * The page number being requested.
@@ -236,7 +244,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var public
 	 */
-	var $pag_page;
+	public $pag_page;
 
 	/**
 	 * The number of items being requested per page.
@@ -244,7 +252,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var public
 	 */
-	var $pag_num;
+	public $pag_num;
 
 	/**
 	 * An HTML string containing pagination links.
@@ -252,7 +260,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var string
 	 */
-	var $pag_links;
+	public $pag_links;
 
 	/**
 	 * The total number of members matching the query parameters.
@@ -260,7 +268,7 @@ class BP_Core_Members_Template {
 	 * @access public
 	 * @var int
 	 */
-	var $total_member_count;
+	public $total_member_count;
 
 	/**
 	 * Constructor method.
@@ -325,7 +333,7 @@ class BP_Core_Members_Template {
 			/**
 			 * Defaults to an empty array to make sure paginate_links()
 			 * won't add the $page_arg to the links which would break
-			 * pagination in case javascript is disabled.
+			 * pagination in case JavaScript is disabled.
 			 */
 			$add_args = array();
 
@@ -507,6 +515,16 @@ function bp_has_members( $args = '' ) {
 		$user_id = bp_displayed_user_id();
 	}
 
+	$member_type = bp_get_current_member_type();
+	if ( ! $member_type && ! empty( $_GET['member_type'] ) ) {
+		if ( is_array( $_GET['member_type'] ) ) {
+			$member_type = $_GET['member_type'];
+		} else {
+			// Can be a comma-separated list.
+			$member_type = explode( ',', $_GET['member_type'] );
+		}
+	}
+
 	// type: active ( default ) | random | newest | popular | online | alphabetical
 	$r = bp_parse_args( $args, array(
 		'type'            => 'active',
@@ -520,7 +538,7 @@ function bp_has_members( $args = '' ) {
 		'exclude'         => false,    // Pass a user_id or a list (comma-separated or array) of user_ids to exclude these users
 
 		'user_id'         => $user_id, // Pass a user_id to only show friends of this user
-		'member_type'     => '',
+		'member_type'     => $member_type,
 		'search_terms'    => null,     // Pass search_terms to filter users by their profile data
 
 		'meta_key'        => false,	   // Only return users with this usermeta
@@ -613,14 +631,31 @@ function bp_members_pagination_count() {
 		$to_num    = bp_core_number_format( ( $start_num + ( $members_template->pag_num - 1 ) > $members_template->total_member_count ) ? $members_template->total_member_count : $start_num + ( $members_template->pag_num - 1 ) );
 		$total     = bp_core_number_format( $members_template->total_member_count );
 
-		if ( 'active' == $members_template->type )
-			$pag = sprintf( _n( 'Viewing 1 active member', 'Viewing %1$s - %2$s of %3$s active members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
-		elseif ( 'popular' == $members_template->type )
-			$pag = sprintf( _n( 'Viewing 1 member with friends', 'Viewing %1$s - %2$s of %3$s members with friends', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
-		elseif ( 'online' == $members_template->type )
-			$pag = sprintf( _n( 'Viewing 1 online member', 'Viewing %1$s - %2$s of %3$s online members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
-		else
-			$pag = sprintf( _n( 'Viewing 1 member', 'Viewing %1$s - %2$s of %3$s members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
+		if ( 'active' == $members_template->type ) {
+			if ( 1 == $members_template->total_member_count ) {
+				$pag = __( 'Viewing 1 active member', 'buddypress' );
+			} else {
+				$pag = sprintf( _n( 'Viewing %1$s - %2$s of %3$s active member', 'Viewing %1$s - %2$s of %3$s active members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
+			}
+		} elseif ( 'popular' == $members_template->type ) {
+			if ( 1 == $members_template->total_member_count ) {
+				$pag = __( 'Viewing 1 member with friends', 'buddypress' );
+			} else {
+				$pag = sprintf( _n( 'Viewing %1$s - %2$s of %3$s member with friends', 'Viewing %1$s - %2$s of %3$s members with friends', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
+			}
+		} elseif ( 'online' == $members_template->type ) {
+			if ( 1 == $members_template->total_member_count ) {
+				$pag = __( 'Viewing 1 online member', 'buddypress' );
+			} else {
+				$pag = sprintf( _n( 'Viewing %1$s - %2$s of %3$s online member', 'Viewing %1$s - %2$s of %3$s online members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
+			}
+		} else {
+			if ( 1 == $members_template->total_member_count ) {
+				$pag = __( 'Viewing 1 member', 'buddypress' );
+			} else {
+				$pag = sprintf( _n( 'Viewing %1$s - %2$s of %3$s member', 'Viewing %1$s - %2$s of %3$s members', $members_template->total_member_count, 'buddypress' ), $from_num, $to_num, $total );
+			}
+		}
 
 		/**
 		 * Filters the members pagination count.
@@ -1401,16 +1436,14 @@ function bp_loggedin_user_avatar( $args = '' ) {
 	 */
 	function bp_get_loggedin_user_avatar( $args = '' ) {
 
-		$defaults = array(
-			'type'   => 'thumb',
-			'width'  => false,
-			'height' => false,
-			'html'   => true,
-			'alt'    => sprintf( __( 'Profile picture of %s', 'buddypress' ), bp_get_loggedin_user_fullname() )
-		);
-
-		$r = wp_parse_args( $args, $defaults );
-		extract( $r, EXTR_SKIP );
+		$r = wp_parse_args( $args, array(
+			'item_id' => bp_loggedin_user_id(),
+			'type'    => 'thumb',
+			'width'   => false,
+			'height'  => false,
+			'html'    => true,
+			'alt'     => sprintf( __( 'Profile picture of %s', 'buddypress' ), bp_get_loggedin_user_fullname() )
+		) );
 
 		/**
 		 * Filters the logged in user's avatar.
@@ -1419,7 +1452,7 @@ function bp_loggedin_user_avatar( $args = '' ) {
 		 *
 		 * @param string $value User avatar string.
 		 */
-		return apply_filters( 'bp_get_loggedin_user_avatar', bp_core_fetch_avatar( array( 'item_id' => bp_loggedin_user_id(), 'type' => $type, 'width' => $width, 'height' => $height, 'html' => $html, 'alt' => $alt ) ) );
+		return apply_filters( 'bp_get_loggedin_user_avatar', bp_core_fetch_avatar( $r ), $r, $args );
 	}
 
 /**
@@ -1450,16 +1483,14 @@ function bp_displayed_user_avatar( $args = '' ) {
 	 */
 	function bp_get_displayed_user_avatar( $args = '' ) {
 
-		$defaults = array(
-			'type'   => 'thumb',
-			'width'  => false,
-			'height' => false,
-			'html'   => true,
-			'alt'    => sprintf( __( 'Profile picture of %s', 'buddypress' ), bp_get_displayed_user_fullname() )
-		);
-
-		$r = wp_parse_args( $args, $defaults );
-		extract( $r, EXTR_SKIP );
+		$r = wp_parse_args( $args, array(
+			'item_id' => bp_displayed_user_id(),
+			'type'    => 'thumb',
+			'width'   => false,
+			'height'  => false,
+			'html'    => true,
+			'alt'     => sprintf( __( 'Profile picture of %s', 'buddypress' ), bp_get_displayed_user_fullname() )
+		) );
 
 		/**
 		 * Filters the displayed user's avatar.
@@ -1468,7 +1499,7 @@ function bp_displayed_user_avatar( $args = '' ) {
 		 *
 		 * @param string $value User avatar string.
 		 */
-		return apply_filters( 'bp_get_displayed_user_avatar', bp_core_fetch_avatar( array( 'item_id' => bp_displayed_user_id(), 'type' => $type, 'width' => $width, 'height' => $height, 'html' => $html, 'alt' => $alt ) ) );
+		return apply_filters( 'bp_get_displayed_user_avatar', bp_core_fetch_avatar( $r ), $r, $args );
 	}
 
 /**
@@ -1788,6 +1819,28 @@ function bp_loggedin_user_username() {
 		 */
 		return apply_filters( 'bp_get_loggedin_user_username', $username );
 	}
+/**
+ * Echo the current member type message.
+ *
+ * @since BuddyPress (2.3.0)
+ */
+function bp_current_member_type_message() {
+	echo bp_get_current_member_type_message();
+}
+	/**
+	 * Generate the current member type message.
+	 *
+	 * @since BuddyPress (2.3.0)
+	 *
+	 * @return string
+	 */
+	function bp_get_current_member_type_message() {
+		$type_object = bp_get_member_type_object( bp_get_current_member_type() );
+
+		$message = sprintf( __( 'Viewing members of the type: %s', 'buddypress' ), '<strong>' . $type_object->labels['singular_name'] . '</strong>' );
+
+		return apply_filters( 'bp_get_current_member_type_message', $message );
+	}
 
 /** Signup Form ***************************************************************/
 
@@ -1813,7 +1866,7 @@ function bp_has_custom_signup_page() {
  * Output the URL to the signup page.
  */
 function bp_signup_page() {
-	echo bp_get_signup_page();
+	echo esc_url( bp_get_signup_page() );
 }
 	/**
 	 * Get the URL to the signup page.
@@ -1859,7 +1912,7 @@ function bp_has_custom_activation_page() {
  * Output the URL of the activation page.
  */
 function bp_activation_page() {
-	echo bp_get_activation_page();
+	echo esc_url( bp_get_activation_page() );
 }
 	/**
 	 * Get the URL of the activation page.
@@ -2236,11 +2289,9 @@ function bp_signup_allowed() {
 		$signup_allowed = false;
 
 		if ( is_multisite() ) {
-			if ( ! isset( $bp->site_options ) ) {
-				$bp->site_options = bp_core_get_root_options();
-			}
+			$registration = bp_core_get_root_option( 'registration' );
 
-			if ( in_array( $bp->site_options['registration'], array( 'all', 'user' ) ) ) {
+			if ( in_array( $registration, array( 'all', 'user' ) ) ) {
 				$signup_allowed = true;
 			}
 
@@ -2286,7 +2337,7 @@ add_action( 'bp_head', 'bp_members_activity_feed' );
  * @param string $nonce See {@bp_get_members_component_link()}.
  */
 function bp_members_component_link( $component, $action = '', $query_args = '', $nonce = false ) {
-	echo bp_get_members_component_link( $component, $action, $query_args, $nonce );
+	echo esc_url( bp_get_members_component_link( $component, $action, $query_args, $nonce ) );
 }
 	/**
 	 * Generate a link to a members component subpage.

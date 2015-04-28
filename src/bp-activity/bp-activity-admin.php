@@ -242,8 +242,8 @@ function bp_activity_admin_load() {
 		// Help panel - sidebar links
 		get_current_screen()->set_help_sidebar(
 			'<p><strong>' . __( 'For more information:', 'buddypress' ) . '</strong></p>' .
-			'<p>' . __( '<a href="http://codex.buddypress.org/buddypress-site-administration/managing-activity/">Managing Activity</a>', 'buddypress' ) . '</p>' .
-			'<p>' . __( '<a href="http://buddypress.org/support/">Support Forums</a>', 'buddypress' ) . '</p>'
+			'<p>' . __( '<a href="https://codex.buddypress.org/administrator-guide/activity-stream-management-panels/">Managing Activity</a>', 'buddypress' ) . '</p>' .
+			'<p>' . __( '<a href="https://buddypress.org/support/">Support Forums</a>', 'buddypress' ) . '</p>'
 		);
 
 		// Register metaboxes for the edit screen.
@@ -253,7 +253,7 @@ function bp_activity_admin_load() {
 		add_meta_box( 'bp_activity_type',    _x( 'Type', 'activity admin edit screen', 'buddypress' ), 'bp_activity_admin_edit_metabox_type', get_current_screen()->id, 'normal', 'core' );
 		add_meta_box( 'bp_activity_userid',  _x( 'Author ID', 'activity admin edit screen', 'buddypress' ), 'bp_activity_admin_edit_metabox_userid', get_current_screen()->id, 'normal', 'core' );
 
-		// Enqueue javascripts
+		// Enqueue JavaScript files
 		wp_enqueue_script( 'postbox' );
 		wp_enqueue_script( 'dashboard' );
 		wp_enqueue_script( 'comment' );
@@ -287,7 +287,7 @@ function bp_activity_admin_load() {
 		// Help panel - sidebar links
 		get_current_screen()->set_help_sidebar(
 			'<p><strong>' . __( 'For more information:', 'buddypress' ) . '</strong></p>' .
-			'<p>' . __( '<a href="http://buddypress.org/support/">Support Forums</a>', 'buddypress' ) . '</p>'
+			'<p>' . __( '<a href="https://buddypress.org/support/">Support Forums</a>', 'buddypress' ) . '</p>'
 		);
 	}
 
@@ -649,7 +649,7 @@ function bp_activity_admin_edit() {
 
 		<?php if ( ! empty( $activity ) ) : ?>
 
-			<form action="<?php echo esc_attr( $form_url ); ?>" id="bp-activities-edit-form" method="post">
+			<form action="<?php echo esc_url( $form_url ); ?>" id="bp-activities-edit-form" method="post">
 				<div id="poststuff">
 
 					<div id="post-body" class="metabox-holder columns-<?php echo 1 == get_current_screen()->get_columns() ? '1' : '2'; ?>">
@@ -1021,7 +1021,7 @@ function bp_activity_admin_index() {
 /**
  * List table class for the Activity component admin page.
  *
- * @since BuddyPress (1.6)
+ * @since BuddyPress (1.6.0)
  */
 class BP_Activity_List_Table extends WP_List_Table {
 
@@ -1050,6 +1050,17 @@ class BP_Activity_List_Table extends WP_List_Table {
 	 * @var array
 	 */
 	protected $activity_user_id = array();
+
+	/**
+	 * If users can comment on blog & forum activity items
+	 *
+	 * @since BuddyPress (2.2.2)
+	 *
+	 * @link https://buddypress.trac.wordpress.org/ticket/6277
+	 *
+	 * @var bool
+	 */
+	public $disable_blogforum_comments = false;
 
 	/**
 	 * Constructor.
@@ -1263,11 +1274,11 @@ class BP_Activity_List_Table extends WP_List_Table {
 	 * @since BuddyPress (1.6.0)
 	 */
 	function get_views() {
-		$url_base = bp_get_admin_url( 'admin.php?page=bp-activity' ); ?>
+		$url_base = add_query_arg( array( 'page' => 'bp-activity' ), bp_get_admin_url( 'admin.php' ) ); ?>
 
 		<ul class="subsubsub">
-			<li class="all"><a href="<?php echo esc_attr( esc_url( $url_base ) ); ?>" class="<?php if ( 'spam' != $this->view ) echo 'current'; ?>"><?php _e( 'All', 'buddypress' ); ?></a> |</li>
-			<li class="spam"><a href="<?php echo esc_attr( esc_url( add_query_arg( 'activity_status', 'spam', $url_base ) ) ); ?>" class="<?php if ( 'spam' == $this->view ) echo 'current'; ?>"><?php printf( __( 'Spam <span class="count">(%s)</span>', 'buddypress' ), number_format_i18n( $this->spam_count ) ); ?></a></li>
+			<li class="all"><a href="<?php echo esc_url( $url_base ); ?>" class="<?php if ( 'spam' != $this->view ) echo 'current'; ?>"><?php _e( 'All', 'buddypress' ); ?></a> |</li>
+			<li class="spam"><a href="<?php echo esc_url( add_query_arg( array( 'activity_status' => 'spam' ), $url_base ) ); ?>" class="<?php if ( 'spam' == $this->view ) echo 'current'; ?>"><?php printf( __( 'Spam <span class="count">(%s)</span>', 'buddypress' ), number_format_i18n( $this->spam_count ) ); ?></a></li>
 
 			<?php
 
@@ -1480,7 +1491,7 @@ class BP_Activity_List_Table extends WP_List_Table {
 
 		// Rollover actions
 
-		// Reply - javascript only; implemented by AJAX.
+		// Reply - JavaScript only; implemented by AJAX.
 		if ( 'spam' != $item_status ) {
 			if ( $this->can_comment( $item ) ) {
 				$actions['reply'] = sprintf( '<a href="#" class="reply hide-if-no-js">%s</a>', __( 'Reply', 'buddypress' ) );

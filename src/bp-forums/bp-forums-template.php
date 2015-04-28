@@ -73,7 +73,7 @@ function bp_forums_root_slug() {
  * @uses bp_get_forums_directory_permalink()
  */
 function bp_forums_directory_permalink() {
-	echo bp_get_forums_directory_permalink();
+	echo esc_url( bp_get_forums_directory_permalink() );
 }
 	/**
 	 * Return permalink for the forum directory.
@@ -111,7 +111,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var int
 	 */
-	var $current_topic = -1;
+	public $current_topic = -1;
 
 	/**
 	 * The number of topics returned by the paged query.
@@ -119,7 +119,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var int
 	 */
-	var $topic_count;
+	public $topic_count;
 
 	/**
 	 * Array of topics located by the query.
@@ -127,7 +127,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var array
 	 */
-	var $topics;
+	public $topics;
 
 	/**
 	 * The topic object currently being iterated on.
@@ -135,7 +135,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var object
 	 */
-	var $topic;
+	public $topic;
 
 	/**
 	 * The ID of the forum whose topics are being queried.
@@ -143,7 +143,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var int
 	 */
-	var $forum_id;
+	public $forum_id;
 
 	/**
 	 * A flag for whether the loop is currently being iterated.
@@ -151,7 +151,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var bool
 	 */
-	var $in_the_loop;
+	public $in_the_loop;
 
 	/**
 	 * The page number being requested.
@@ -159,7 +159,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var int
 	 */
-	var $pag_page;
+	public $pag_page;
 
 	/**
 	 * The number of items being requested per page.
@@ -167,7 +167,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var int
 	 */
-	var $pag_num;
+	public $pag_num;
 
 	/**
 	 * An HTML string containing pagination links.
@@ -175,7 +175,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var string
 	 */
-	var $pag_links;
+	public $pag_links;
 
 	/**
 	 * The total number of topics matching the query parameters.
@@ -183,7 +183,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var int
 	 */
-	var $total_topic_count;
+	public $total_topic_count;
 
 	/**
 	 * Whether requesting a single topic. Not currently used.
@@ -191,7 +191,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var bool
 	 */
-	var $single_topic = false;
+	public $single_topic = false;
 
 	/**
 	 * Term to sort by. Not currently used.
@@ -199,7 +199,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var string
 	 */
-	var $sort_by;
+	public $sort_by;
 
 	/**
 	 * Sort order. Not currently used.
@@ -207,7 +207,7 @@ class BP_Forums_Template_Forum {
 	 * @access public
 	 * @var string
 	 */
-	var $order;
+	public $order;
 
 	/**
 	 * Constructor method.
@@ -1775,7 +1775,7 @@ function bp_forum_topic_type() {
  * @since BuddyPress (1.5.0)
  */
 function bp_forum_topic_new_reply_link() {
-	echo bp_get_forum_topic_new_reply_link();
+	echo esc_url( bp_get_forum_topic_new_reply_link() );
 }
 	/**
 	 * Return the permalink for the New Reply button at the top of forum topics.
@@ -1878,6 +1878,12 @@ function bp_forum_pagination_count() {
 		if ( 'tags' == $forum_template->type && !empty( $forum_template->search_terms ) )
 			$pag_filter = sprintf( __( ' matching tag "%s"', 'buddypress' ), $forum_template->search_terms );
 
+		if ( 1 == $forum_template->total_topic_count ) {
+			$message = __( 'Viewing 1 topic', 'buddypress' );
+		} else {
+			$message = sprintf( _n( 'Viewing %1$s - %2$s of %3$s topic', 'Viewing %1$s - %2$s of %3$s topics', (int) $forum_template->total_topic_count, 'buddypress' ), $from_num, $to_num, $total, $pag_filter );
+		}
+
 		/**
 		 * Filters the pagination count for the current topic list.
 		 *
@@ -1888,7 +1894,7 @@ function bp_forum_pagination_count() {
 		 * @param string $to_num   High end count in the view.
 		 * @param string $total    Total count of topics found.
 		 */
-		return apply_filters( 'bp_get_forum_pagination_count', sprintf( _n( 'Viewing 1 topic', 'Viewing %1$s - %2$s of %3$s topics', (int) $forum_template->total_topic_count, 'buddypress' ), $from_num, $to_num, $total, $pag_filter ), $from_num, $to_num, $total );
+		return apply_filters( 'bp_get_forum_pagination_count', $message, $from_num, $to_num, $total );
 	}
 
 /**
@@ -1916,7 +1922,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var int
 	 */
-	var $current_post = -1;
+	public $current_post = -1;
 
 	/**
 	 * The number of posts returned by the paged query.
@@ -1924,7 +1930,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var int
 	 */
-	var $post_count;
+	public $post_count;
 
 	/**
 	 * Array of posts located by the query.
@@ -1932,7 +1938,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var array
 	 */
-	var $posts;
+	public $posts;
 
 	/**
 	 * The post object currently being iterated on.
@@ -1940,7 +1946,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var object
 	 */
-	var $post;
+	public $post;
 
 	/**
 	 * The ID of the forum whose topic is being queried.
@@ -1948,7 +1954,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var int
 	 */
-	var $forum_id;
+	public $forum_id;
 
 	/**
 	 * The ID of the topic whose posts are being queried.
@@ -1956,7 +1962,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var int
 	 */
-	var $topic_id;
+	public $topic_id;
 
 	/**
 	 * The topic object to which the posts belong.
@@ -1964,7 +1970,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var object
 	 */
-	var $topic;
+	public $topic;
 
 	/**
 	 * A flag for whether the loop is currently being iterated.
@@ -1972,7 +1978,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var bool
 	 */
-	var $in_the_loop;
+	public $in_the_loop;
 
 	/**
 	 * Contains a 'total_pages' property holding total number of pages in
@@ -1989,7 +1995,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var public
 	 */
-	var $pag_page;
+	public $pag_page;
 
 	/**
 	 * The number of items being requested per page.
@@ -1997,7 +2003,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var public
 	 */
-	var $pag_num;
+	public $pag_num;
 
 	/**
 	 * An HTML string containing pagination links.
@@ -2005,7 +2011,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var string
 	 */
-	var $pag_links;
+	public $pag_links;
 
 	/**
 	 * The total number of posts matching the query parameters.
@@ -2013,7 +2019,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var int
 	 */
-	var $total_post_count;
+	public $total_post_count;
 
 	/**
 	 * Whether requesting a single topic. Not currently used.
@@ -2021,7 +2027,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var bool
 	 */
-	var $single_post = false;
+	public $single_post = false;
 
 	/**
 	 * Term to sort by.
@@ -2029,7 +2035,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var string
 	 */
-	var $sort_by;
+	public $sort_by;
 
 	/**
 	 * Sort order.
@@ -2037,7 +2043,7 @@ class BP_Forums_Template_Topic {
 	 * @access public
 	 * @var string
 	 */
-	var $order;
+	public $order;
 
 	/**
 	 * Constructor method.
@@ -2493,7 +2499,7 @@ function bp_the_topic_post_time_since() {
  * Output whether the current post in the loop belongs to the logged-in user.
  */
 function bp_the_topic_post_is_mine() {
-	echo bp_the_topic_post_is_mine();
+	echo bp_get_the_topic_post_is_mine();
 }
 	/**
 	 * Does the current post belong to the logged-in user?
@@ -2622,6 +2628,12 @@ function bp_the_topic_pagination_count() {
 	$to_num = bp_core_number_format( ( $start_num + ( $topic_template->pag_num - 1  ) > $topic_template->total_post_count ) ? $topic_template->total_post_count : $start_num + ( $topic_template->pag_num - 1 ) );
 	$total = bp_core_number_format( $topic_template->total_post_count );
 
+	if ( 1 == $topic_template->total_post_count ) {
+		$message = __( 'Viewing 1 post', 'buddypress' );
+	} else {
+		$message = sprintf( _n( 'Viewing %1$s - %2$s of %3$s post', 'Viewing %1$s - %2$s of %3$s posts', (int) $topic_template->total_post_count, 'buddypress' ), $from_num, $to_num, $total );
+	}
+
 	/**
 	 * Filters the pagination count for the current topic page.
 	 *
@@ -2632,7 +2644,7 @@ function bp_the_topic_pagination_count() {
 	 * @param string $to_num   High end count in the view.
 	 * @param string $total    Total count of topics found.
 	 */
-	echo apply_filters( 'bp_the_topic_pagination_count', sprintf( _n( 'Viewing 1 post', 'Viewing %1$s - %2$s of %3$s posts', (int) $topic_template->total_post_count, 'buddypress' ), $from_num, $to_num, $total ), $from_num, $to_num, $total );
+	echo apply_filters( 'bp_the_topic_pagination_count', $message, $from_num, $to_num, $total );
 }
 
 /**
